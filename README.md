@@ -36,13 +36,14 @@ Run `/gt help` first to see every mode. The basic cycle:
 6. `/gt retro 1` — optional retrospective.
 7. `/gt plan 2` — plan the next stage; repeat until done.
 
-See `commands/gt.md` for all 13 modes (`help`, `plan`, `next`, `skip`, `status`, `verify`, `replan`, `retro`, `log`, `close stage`, `reopen`, `start`).
+See [docs/usage.md](docs/usage.md) for the per-mode usage reference (all 13 modes: `help`, `plan`, `next`, `skip`, `status`, `verify`, `replan`, `retro`, `log`, `close stage`, `reopen`, `start`). `commands/gt.md` remains the machine-readable source of truth.
 
 ## Structure
 
 ```
 agents/gt.md      # agent definition (permissions, behavior rules)
 commands/gt.md    # /gt command definition (all modes)
+docs/usage.md     # per-mode usage reference
 tests/            # structural checks (Node built-in test runner)
 ```
 
