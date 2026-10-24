@@ -36,7 +36,7 @@ Run `/gt help` first to see every mode. The basic cycle:
 6. `/gt retro 1` — optional retrospective.
 7. `/gt plan 2` — plan the next stage; repeat until done.
 
-See [docs/usage.md](docs/usage.md) for the per-mode usage reference (all 13 modes: `help`, `plan`, `next`, `skip`, `status`, `verify`, `replan`, `retro`, `log`, `close stage`, `reopen`, `start`). `commands/gt.md` remains the machine-readable source of truth. For a worked end-to-end walkthrough with sample outputs, see [docs/example.md](docs/example.md). For the permission table, repo guard and workflow invariants, see [docs/safety.md](docs/safety.md).
+See [docs/usage.md](docs/usage.md) for the per-mode usage reference (all 13 modes: `help`, `plan`, `next`, `skip`, `status`, `verify`, `replan`, `retro`, `log`, `close stage`, `reopen`, `start`). `commands/gt.md` remains the machine-readable source of truth. For a worked end-to-end walkthrough with sample outputs, see [docs/example.md](docs/example.md). For the permission table, repo guard and workflow invariants, see [docs/safety.md](docs/safety.md). For a refusal-by-refusal troubleshooting index, see [docs/faq.md](docs/faq.md).
 
 ## Structure
 
@@ -46,6 +46,7 @@ commands/gt.md    # /gt command definition (all modes)
 docs/usage.md     # per-mode usage reference
 docs/example.md   # worked end-to-end workflow example
 docs/safety.md    # permissions, safety model, repo guard
+docs/faq.md       # troubleshooting FAQ
 tests/            # structural checks (Node built-in test runner)
 ```
 

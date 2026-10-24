@@ -1,6 +1,6 @@
 # Usage reference
 
-Human-readable companion to `commands/gt.md` (the machine-readable source of truth). Every mode below is defined there; this file documents syntax, what each mode reads, what it writes on GitHub, and what it refuses to do.
+Human-readable companion to `commands/gt.md` (the machine-readable source of truth). Every mode below is defined there; this file documents syntax, what each mode reads, what it writes on GitHub, and what it refuses to do. For a worked walkthrough see [example.md](example.md); for permissions, the repo guard and invariants see [safety.md](safety.md); for the refusal-by-refusal troubleshooting index see [faq.md](faq.md).
 
 ## Labels
 

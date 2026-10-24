@@ -1,6 +1,6 @@
 # Permissions and safety model
 
-`/gt` is read-only on the filesystem and write-scoped on GitHub. This file is the plain-language translation of the `permission` frontmatter in `agents/gt.md` plus the repo guard and rules in `commands/gt.md`.
+`/gt` is read-only on the filesystem and write-scoped on GitHub. This file is the plain-language translation of the `permission` frontmatter in `agents/gt.md` plus the repo guard and rules in `commands/gt.md`. For the per-mode reference see [usage.md](usage.md); for a worked walkthrough see [example.md](example.md); for refusal troubleshooting see [faq.md](faq.md).
 
 ## Permission table
 

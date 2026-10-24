@@ -1,6 +1,6 @@
 # Workflow example
 
-A worked walkthrough of the `/gt` basic cycle on a fictional mini-project. Issue numbers and counts in the sample outputs are illustrative — they are not this repository's own stage issues. For the full per-mode reference see [usage.md](usage.md).
+A worked walkthrough of the `/gt` basic cycle on a fictional mini-project. Issue numbers and counts in the sample outputs are illustrative — they are not this repository's own stage issues. For the full per-mode reference see [usage.md](usage.md); for permissions and the repo guard see [safety.md](safety.md); for refusal troubleshooting see [faq.md](faq.md).
 
 ## Setup
 
