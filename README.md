@@ -20,6 +20,7 @@ Copy the two shipped files into your opencode config directory:
 mkdir -p ~/.config/opencode/agents ~/.config/opencode/commands
 cp agents/gt.md ~/.config/opencode/agents/gt.md
 cp commands/gt.md ~/.config/opencode/commands/gt.md
+cp commands/cp.md ~/.config/opencode/commands/cp.md
 ```
 
 `/gt` must be run from inside a project folder whose `origin` remote is a GitHub repository — it refuses to run anywhere else (repo guard).
@@ -43,6 +44,7 @@ See [docs/usage.md](docs/usage.md) for the per-mode usage reference (all 13 mode
 ```
 agents/gt.md      # agent definition (permissions, behavior rules)
 commands/gt.md    # /gt command definition (all modes)
+commands/cp.md    # /cp command definition (commit and push)
 docs/usage.md     # per-mode usage reference
 docs/example.md   # worked end-to-end workflow example
 docs/safety.md    # permissions, safety model, repo guard

@@ -67,4 +67,4 @@ Rules that hold in every mode, traceable to `agents/gt.md` or the `Rules` block 
 
 **How**: `/cp gt` references the current stage issue with `(#<number>)` in the commit subject; `/gt next`'s consistency check looks for a subject ending in `(#<N>)` in `git log --oneline -50`.
 
-**Boundary**: `/cp` is a separate opencode command from the owner's live config. This repository does **not** ship `cp.md`. This section explains `/cp gt`'s role inside the `/gt` cycle — it is not a full `/cp` reference.
+**Boundary**: `/cp` is a separate opencode command from the owner's live config; this repository ships it as [commands/cp.md](../commands/cp.md), the full `/cp` reference (mode `/cp gt` and the standard commit-and-push workflow). This section explains `/cp gt`'s role inside the `/gt` cycle — the `/gt`-side gates (working-tree gate, `(#<number>)` consistency check); the complete rules live in the shipped file.
