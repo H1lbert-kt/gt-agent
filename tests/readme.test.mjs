@@ -18,6 +18,7 @@ test("headings appear in the required order", () => {
     "## Prerequisites",
     "## Install",
     "## Quick start",
+    "## In a company",
     "## Structure",
   ];
   let lastIndex = -1;
@@ -39,7 +40,10 @@ test("required literals are present", () => {
     "~/.config/opencode/",
     "agents/gt.md",
     "commands/gt.md",
+    "commands/cp.md",
     "/gt help",
+    "/cp gt",
+    "In a company",
     "node --test tests/",
   ];
   for (const literal of literals) {
