@@ -70,6 +70,20 @@ Otherwise `/gt verify` is a pure dry-run: it reports the `planned` label, the te
 - `/gt replan <N>` on a closed stage → STOP; reopen it first with `/gt reopen <N>`.
 - `/gt plan <N>` on an already-planned stage → use `/gt replan <N>` instead (old plans stay as history).
 
+## /gt impact
+
+**What the three signals are**
+- **Signal 1 — dependencies (fact):** native `blockedBy,blocking` edges from `gh issue view <N> --json blockedBy,blocking`, with titles — the same graph `/gt status` and `/gt start` read.
+- **Signal 2 — plan file overlap (heuristic):** path-like mentions extracted from every stage's `<!-- gt:plan` comments and intersected with N's; graded high (≥2 shared concrete files), medium (1), low (directory/pattern only). Every row is a signal, never a conclusion.
+- **Signal 3 — retrospective history:** one-line summaries of the `## Retrospective` comments of N and of the stages surfaced above — lessons for the replan, never a verdict.
+
+**Impact vs replan vs doctor**
+`/gt impact <N>` advises (read-only, no `planned` needed, open or closed stages); `/gt replan <N>` is the only command that writes a plan; `/gt doctor` audits chain integrity (errors vs warnings). Impact never triggers replan or retro itself.
+
+**Refusals**
+- The issue does not exist or lacks the `stage` label → STOP, same refusal as `verify`/`replan`/`retro`/`reopen`.
+- Nothing else: impact makes no assumption about numbering, tolerates stage 14's future real dependencies, and never writes to GitHub.
+
 ## /gt doctor
 
 **What the errors mean (fix before the next `/gt` call)**
@@ -91,6 +105,6 @@ Otherwise `/gt verify` is a pure dry-run: it reports the `planned` label, the te
 
 ## Keeping the docs in sync
 
-`agents/gt.md` and `commands/gt.md` are **byte-copies** of the owner's live opencode config and the source of truth. README and the files under `docs/` are derived from them, and the structural tests check quoted literals and heading order — not prose fidelity. If the live config changes, the docs go stale: re-run the consistency sweep (14 modes and syntaxes, refusal strings, plan format v2 with its `<!-- gt:plan v2 -->` marker, the `<!-- gt:plan -->` legacy fallback, `## Constraints` and the `Test command:` line, the evidence close comment, the replan dirty-tree refusal, the three labels, the close gate and its two exceptions) and fix the doc files only — never the two source files.
+`agents/gt.md` and `commands/gt.md` are **byte-copies** of the owner's live opencode config and the source of truth. README and the files under `docs/` are derived from them, and the structural tests check quoted literals and heading order — not prose fidelity. If the live config changes, the docs go stale: re-run the consistency sweep (15 modes and syntaxes, refusal strings, plan format v2 with its `<!-- gt:plan v2 -->` marker, the `<!-- gt:plan -->` legacy fallback, `## Constraints` and the `Test command:` line, the evidence close comment, the replan dirty-tree refusal, the three labels, the close gate and its two exceptions) and fix the doc files only — never the two source files.
 
 Doc map: [usage.md](usage.md) for the per-mode reference, [example.md](example.md) for the worked walkthrough, [safety.md](safety.md) for permissions, the repo guard and invariants, and the [README](../README.md) for install and quick start.

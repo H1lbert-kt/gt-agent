@@ -30,9 +30,9 @@ test("headings appear in the required order", () => {
   }
 });
 
-test("one ### subsection per mode, covering all 14 syntaxes", () => {
+test("one ### subsection per mode, covering all 15 syntaxes", () => {
   const subsections = [...usage.matchAll(/^### (.+)$/gm)].map((m) => m[1]);
-  assert.equal(subsections.length, 14, `expected 14 subsections, got ${subsections.length}`);
+  assert.equal(subsections.length, 15, `expected 15 subsections, got ${subsections.length}`);
 
   const syntaxLiterals = [
     "/gt help",
@@ -48,6 +48,7 @@ test("one ### subsection per mode, covering all 14 syntaxes", () => {
     "/gt status",
     "/gt verify",
     "/gt replan",
+    "/gt impact",
     "/gt retro",
     "/gt log",
     "/gt close stage",
@@ -79,7 +80,15 @@ test("read-only and writing mode lists are complete", () => {
     usage.indexOf("## Read-only modes"),
     usage.indexOf("## Writing modes"),
   );
-  for (const name of ["help", "status", "verify", "log", "start", "doctor"]) {
+  for (const name of [
+    "help",
+    "status",
+    "verify",
+    "log",
+    "start",
+    "doctor",
+    "impact",
+  ]) {
     assert.ok(readOnly.includes(name), `read-only list missing: ${name}`);
   }
 

@@ -1,5 +1,5 @@
 ---
-description: Stage issues workflow: /gt <repo> <prompt>, /gt plan all|<N>|new issue <prompt> [--dry-run], /gt next, /gt status, /gt verify <N>, /gt replan <N>, /gt retro <N>, /gt log, /gt skip, /gt close stage, /gt reopen <N>, /gt start, /gt doctor, /gt help
+description: Stage issues workflow: /gt <repo> <prompt>, /gt plan all|<N>|new issue <prompt> [--dry-run], /gt next, /gt status, /gt verify <N>, /gt replan <N>, /gt impact <N>, /gt retro <N>, /gt log, /gt skip, /gt close stage, /gt reopen <N>, /gt start, /gt doctor, /gt help
 agent: gt
 subtask: true
 ---
@@ -11,9 +11,9 @@ Parse the arguments in this order:
 - If the first token is a repo URL or `owner/repo` -> Mode A (kickoff).
 - If the first token is `plan` -> Mode D (only accepts `all`, a stage number, or `stage` followed by a number, or `new issue <prompt>`, plus optional `--dry-run`).
 - If the first token is `next` -> Mode B. If it is `skip` -> Mode C. If the first two tokens are `close stage` -> Mode E.
-- If the first token is `status` -> Mode F. If it is `verify` -> Mode V. If it is `replan` -> Mode G. If it is `retro` -> Mode R. If it is `log` -> Mode L. If it is `reopen` -> Mode O. If it is `start` -> Mode S. If it is `doctor` -> Mode T.
-- Modes B, C, E, F, V, G, R, L, O, S and T work on the repository of the current directory (repo guard below).
-- Modes V, G, R and O need a stage number as the second token. If it is missing or not a number, show Mode H and say the argument was not recognized. Do not guess.
+- If the first token is `status` -> Mode F. If it is `verify` -> Mode V. If it is `replan` -> Mode G. If it is `impact` -> Mode I. If it is `retro` -> Mode R. If it is `log` -> Mode L. If it is `reopen` -> Mode O. If it is `start` -> Mode S. If it is `doctor` -> Mode T.
+- Modes B, C, E, F, V, G, I, R, L, O, S and T work on the repository of the current directory (repo guard below).
+- Modes V, G, I, R and O need a stage number as the second token. If it is missing or not a number, show Mode H and say the argument was not recognized. Do not guess.
 - Modes S and T accept no further arguments.
 - Anything else: show Mode H and say the argument was not recognized. Do not guess.
 
@@ -120,6 +120,9 @@ AUXILIARES
                    sem mudar nada (dry-run do gate do /gt next).
   /gt replan <N>   Re-plana a etapa N: anexa um novo plano como comentário
                    (o plano antigo vira histórico) e mantém `planned`.
+  /gt impact <N>   Antes de replanjar: relata o que mudar a etapa N afeta
+                   a jusante (dependências, sobreposição de arquivos nos
+                   planos, retrospectivos) — só leitura, nunca conclui.
   /gt retro <N>    Anexa um retrospective na etapa N: o que foi entregue vs
                    o plano, critérios que sobraram, riscos que viraram
                    problema, lições para as próximas etapas.
@@ -152,8 +155,8 @@ LABELS
 
 DICAS
   - Planejar é exclusivo do /gt plan (e /gt replan). /gt next só avalia e fecha.
-  - /gt status, /gt verify, /gt log, /gt start e /gt doctor são só leitura;
-    /gt retro e /gt replan só mexem na issue que você pediu.
+  - /gt status, /gt verify, /gt log, /gt start, /gt impact e /gt doctor são
+    só leitura; /gt retro e /gt replan só mexem na issue que você pediu.
   - Para replanjar: /gt replan <N> (não precisa tirar o label na mão).
   - Criar ou planejar etapas (/gt plan, /gt plan new issue, /gt replan,
     /gt retro, kickoff) sempre começa pela leitura do projeto inteiro:
@@ -312,6 +315,16 @@ Finish with a summary (one line per planned stage, plus a table of issue number 
 5. Apply the planning step (Mode D) to issue N — it starts with the shared whole-project analysis, so the new plan is grounded in the current code, tests, git state and stage history: append a NEW plan comment (marker `<!-- gt:plan v2 -->`), self-check it, then make sure the `planned` label is present. Old plans remain as history; if planning fails, the previous plan and label stay untouched.
 6. Show a one-line summary of the new plan and STOP. Wait for my approval before implementing anything.
 
+## Mode I: `impact <N>` (read-only impact advisory; never writes, never concludes)
+
+Advises before a `/gt replan`: what changing stage N would affect downstream. This mode NEVER writes to GitHub: no comment, no label, no close, no create, no edit — it reports three signals and never changes anything automatically. It requires no `planned` label (it is pre-replan advice) and works on open or closed stages (a closed N is reported with its state).
+
+1. Run the repo guard, then `gh issue view <N> --json number,title,labels,state`. If the issue does not exist or does not have the `stage` label, tell me and STOP (the same refusal as Modes V/G/R/O). Report N's title and state in the header.
+2. **Signal 1 — dependencies (fact):** `gh issue view <N> --json blockedBy,blocking` (the exact read Modes F and S already use) plus stage titles from `gh issue list --label stage --state all --json number,title,state --limit 200`. Report the upstream (`blockedBy`) and downstream (`blocking`) edges with titles and states — GitHub's native dependency graph, the same one the `addBlockedBy` mutation writes in Modes A and D-New. With no edges, say so.
+3. **Signal 2 — plan file overlap (heuristic):** from every stage's plan comments (first line starting with `<!-- gt:plan`, the stage-9 prefix match), extract path-like mentions (`commands/gt.md`, `docs/*.md`, `tests/*.mjs`, directory prefixes) and intersect them with N's set. Grade each overlap: high = at least 2 shared concrete file paths, medium = 1 shared concrete file path, low = only a shared directory/pattern. Print every row with its grade plus the standing disclaimer that this is a signal, never a conclusion.
+4. **Signal 3 — retrospective history:** for N and each stage surfaced by signals 1 and 2, read its `## Retrospective` comments (Mode R's format) and summarize one line each — lessons for the replan, never a verdict. With none, say so.
+5. Report layout: header (stage N, title, state) -> `Signal 1 — dependencies (fact)` -> `Signal 2 — plan file overlap (heuristic — a signal, never a conclusion)` -> `Signal 3 — retrospective history` -> closing line: `/gt replan <N>` is the only command that changes a plan (`/gt doctor` audits the chain); impact itself never plans, never comments, never writes. STOP.
+
 ## Mode L: `log` (changelog of closed stages, read-only)
 
 1. Run the repo guard, then `gh issue list --label stage --state closed --json number,title,closedAt,stateReason --limit 200`. Sort by number. If none, say no stage has been closed yet and STOP.
@@ -394,7 +407,7 @@ Audits drift made outside the agent (a label removed by hand, a dependency delet
 
 - `/gt plan` and `/gt replan` are the ONLY commands that write a detailed plan or add the `planned` label. `/gt next`, `/gt skip`, `/gt close stage`, `/gt status`, `/gt verify`, `/gt log`, `/gt reopen` and `/gt start` never plan.
 - `--dry-run` never writes anything to GitHub: no comments, no labels, no issues.
-- `/gt status`, `/gt verify`, `/gt log`, `/gt start` and `/gt doctor` are read-only; `/gt start` and `/gt doctor` never write to GitHub at all (no comment, label, close, create or edit). `/gt retro` and `/gt replan` touch only the issue you named.
+- `/gt status`, `/gt verify`, `/gt log`, `/gt start`, `/gt impact` and `/gt doctor` are read-only; `/gt start`, `/gt impact` and `/gt doctor` never write to GitHub at all (no comment, label, close, create or edit). `/gt retro` and `/gt replan` touch only the issue you named.
 - Every mode runs against the repository of the current directory (repo guard); two repositories are never mixed, and no `gh` command uses `-R`.
 - Never advance while an earlier stage is still open, unless I used `skip`. The ONLY exceptions are `/gt skip` (closes the current stage as `not planned`) and `/gt close stage` (I pick any open stage; tests are the gate). (`plan all` only appends plans to existing open issues; it never closes anything.)
 - A stage issue may only be closed when EVERY `- [ ]` item in it is checked AND the stage's tests pass (found via the plan's `<!-- gt:plan` marker — `<!-- gt:plan v2 -->` or legacy `<!-- gt:plan -->` — and its `## Tests` / `Test command:` line) AND the working tree is clean. Checked boxes alone are never enough; failed tests never close an issue. The ONLY exceptions: `/gt close stage` is owner-driven — I pick the issue, tests passing is the gate, unchecked boxes are only reported; and `/gt skip` closes without tests or checked boxes, but only after my explicit confirmation. When a stage closes, the close comment carries evidence: test command, pass count (`not reported` when the runner prints none) and the `(#N)` commit subjects (`none` when there are none).

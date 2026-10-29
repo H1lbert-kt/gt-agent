@@ -25,6 +25,7 @@ These modes never write to GitHub (no comment, label, close, create or edit):
 - `/gt verify <N>` — dry-run of the `/gt next` gate: runs the stage's tests, reports criteria and tree state, closes nothing.
 - `/gt log` — changelog of closed stages.
 - `/gt start` — surveys existing (non-stage) issues and reports where to begin.
+- `/gt impact <N>` — pre-replan advisory: what changing stage N would affect downstream (native dependencies, confidence-graded plan file overlap, retrospective history); signals, never conclusions.
 - `/gt doctor` — deep integrity audit of the stage chain: reports errors vs warnings and only suggests commands, never auto-corrects.
 
 The `--dry-run` flag on `/gt plan` is also read-only: it drafts plans in the conversation and never writes comments, labels or issues.
@@ -101,6 +102,13 @@ Every mode runs against the repository of the current directory (repo guard: `gi
 - Reads: whole project analysis, issue N's description and plan history, git state (`git status --porcelain`); asks for a one-line reason (optional).
 - Writes: appends a NEW plan comment (`<!-- gt:plan v2 -->`); ensures `planned` is present.
 - Refuses: issue without `stage` label; closed stage (use `/gt reopen <N>` first); a dirty working tree — it warns `o plano novo pode ficar desatualizado em relação ao código não commitado`, asks `Replanjar mesmo assim? responda sim para confirmar.` and stops without writing anything unless confirmed. Never deletes old plans.
+
+### /gt impact \<N\>
+
+- Syntax: `/gt impact <N>`.
+- Reads: issue N's labels/state, native dependency edges (`gh issue view <N> --json blockedBy,blocking`), plan comments of every stage (prefix `<!-- gt:plan`), `## Retrospective` comments of N and the surfaced stages.
+- Writes: nothing — advisory only; requires no `planned` label and works on open or closed stages.
+- Refuses: issue without `stage` label (same refusal as `verify`/`replan`/`retro`/`reopen`). File-mention overlap is graded high/medium/low and always labeled a signal, never a conclusion; impact never plans — `/gt replan <N>` does that.
 
 ### /gt retro \<N\>
 
