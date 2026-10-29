@@ -70,8 +70,27 @@ Otherwise `/gt verify` is a pure dry-run: it reports the `planned` label, the te
 - `/gt replan <N>` on a closed stage → STOP; reopen it first with `/gt reopen <N>`.
 - `/gt plan <N>` on an already-planned stage → use `/gt replan <N>` instead (old plans stay as history).
 
+## /gt doctor
+
+**What the errors mean (fix before the next `/gt` call)**
+- **E1** a `planned` stage has no valid plan comment (first line starting `<!-- gt:plan`) or that comment lacks a non-empty `Test command:` line → `next`/`close stage`/`verify` cannot verify it. Fix: `/gt replan <M>`.
+- **E2** that plan's headings are out of the fixed order → the parser reads them positionally. Fix: `/gt replan <M>`.
+- **E3** the native `blockedBy` chain diverges from stage numbering (stage N not blocked by stage N-1) → the owner rewires manually; doctor never writes.
+- **E4** an OPEN stage carries the `skipped` label → `/gt skip` always closed stages, so the label state diverged. Fix: `gh issue edit <M> --remove-label skipped` or close it.
+- **E5** a `- [ ]` item sits inside a plan's `## Constraints` → it would stay unchecked forever and block `/gt next`. Fix: `/gt replan <M>`.
+
+**What the warnings mean (degraded but working)**
+- **W1** open stage without `planned` — the normal lifecycle for stages beyond the current one (suggests `/gt plan <M>` for the lowest open only).
+- **W2** closed stage with no `(#<M>)` subject in `git log --oneline -50` — the same 50-line window `/gt next` warns about, so doctor never contradicts it.
+- **W3** a skipped stage whose dependents were never re-wired — dedupe: this replaces E3 when a skip explains the divergence.
+- **W4** orphan checkboxes in comments that are neither plan nor retrospective comments — they silently feed the checkbox gate.
+- **W5** a closed stage missing `planned` while not closed as `not planned`.
+
+**Doctor vs status**
+`/gt status` is the operational panel (current stage, criteria, next action) and adds `Integridade: <n> erro(s) — rode /gt doctor para o relatório completo.` only when an error-class check fails — reusing data it already fetched, with no git calls. `/gt doctor` is the deep audit: full E1-E5 + W1-W5 catalog with suggested commands. Both are read-only; doctor never auto-corrects.
+
 ## Keeping the docs in sync
 
-`agents/gt.md` and `commands/gt.md` are **byte-copies** of the owner's live opencode config and the source of truth. README and the files under `docs/` are derived from them, and the structural tests check quoted literals and heading order — not prose fidelity. If the live config changes, the docs go stale: re-run the consistency sweep (13 modes and syntaxes, refusal strings, plan format v2 with its `<!-- gt:plan v2 -->` marker, the `<!-- gt:plan -->` legacy fallback, `## Constraints` and the `Test command:` line, the evidence close comment, the replan dirty-tree refusal, the three labels, the close gate and its two exceptions) and fix the doc files only — never the two source files.
+`agents/gt.md` and `commands/gt.md` are **byte-copies** of the owner's live opencode config and the source of truth. README and the files under `docs/` are derived from them, and the structural tests check quoted literals and heading order — not prose fidelity. If the live config changes, the docs go stale: re-run the consistency sweep (14 modes and syntaxes, refusal strings, plan format v2 with its `<!-- gt:plan v2 -->` marker, the `<!-- gt:plan -->` legacy fallback, `## Constraints` and the `Test command:` line, the evidence close comment, the replan dirty-tree refusal, the three labels, the close gate and its two exceptions) and fix the doc files only — never the two source files.
 
 Doc map: [usage.md](usage.md) for the per-mode reference, [example.md](example.md) for the worked walkthrough, [safety.md](safety.md) for permissions, the repo guard and invariants, and the [README](../README.md) for install and quick start.

@@ -21,10 +21,11 @@ Stage issues are chained with NATIVE GitHub issue dependencies via the `addBlock
 These modes never write to GitHub (no comment, label, close, create or edit):
 
 - `/gt help` — prints the built-in help.
-- `/gt status` — dashboard of all stages, current stage, criteria progress.
+- `/gt status` — dashboard of all stages, current stage, criteria progress, plus a one-line integrity summary when the error-class checks fail.
 - `/gt verify <N>` — dry-run of the `/gt next` gate: runs the stage's tests, reports criteria and tree state, closes nothing.
 - `/gt log` — changelog of closed stages.
 - `/gt start` — surveys existing (non-stage) issues and reports where to begin.
+- `/gt doctor` — deep integrity audit of the stage chain: reports errors vs warnings and only suggests commands, never auto-corrects.
 
 The `--dry-run` flag on `/gt plan` is also read-only: it drafts plans in the conversation and never writes comments, labels or issues.
 
@@ -135,3 +136,10 @@ Every mode runs against the repository of the current directory (repo guard: `gi
 - Reads: all open issues (labels, assignees, dependencies, PRs), deep-reads at most the top 5.
 - Writes: nothing — report only.
 - Refuses: nothing — read-only. Suggests adopting the stage workflow but never executes it.
+
+### /gt doctor
+
+- Syntax: `/gt doctor` (no further arguments).
+- Reads: all `stage` issues (open + closed: body, comments, labels, state, native `blockedBy`), `git log --oneline -50`, `git status --porcelain`.
+- Writes: nothing — report only, never auto-corrects (suggests commands instead).
+- Refuses: nothing beyond the repo guard. Errors (E1-E5): `planned` stage without a valid plan comment / `Test command:` line; plan heading order violated; `blockedBy` chain diverging from stage numbering; `skipped` label on an open stage; a `- [ ]` item inside `## Constraints`. Warnings (W1-W5): open stage without `planned`; closed stage with no `(#N)` commit; skipped stage with unwired dependents; orphan checkboxes; inconsistent labels. A skip-induced chain gap is reported once as W3, not as E3.
