@@ -31,10 +31,12 @@ test("command frontmatter wires the agent as subtask", () => {
 });
 
 test("command body contains the plan format", () => {
+  assert.ok(commandSrc.includes("<!-- gt:plan v2 -->"));
   assert.ok(commandSrc.includes("<!-- gt:plan -->"));
+  assert.ok(commandSrc.includes("prefix `<!-- gt:plan`"));
   assert.match(commandSrc, /^Test command:/m);
 
-  const templateStart = commandSrc.indexOf("```\n<!-- gt:plan -->");
+  const templateStart = commandSrc.indexOf("```\n<!-- gt:plan v2 -->");
   assert.ok(templateStart > -1, "plan template code fence missing");
   const template = commandSrc.slice(
     templateStart,
@@ -46,6 +48,7 @@ test("command body contains the plan format", () => {
     "## Scope",
     "### Included",
     "### Not included",
+    "## Constraints",
     "## Technical approach",
     "## Implementation steps",
     "## Tests",
@@ -58,6 +61,35 @@ test("command body contains the plan format", () => {
     assert.ok(index > lastIndex, `heading out of order or missing: ${heading}`);
     lastIndex = index;
   }
+
+  const constraints = template.slice(
+    template.indexOf("## Constraints"),
+    template.indexOf("## Technical approach"),
+  );
+  assert.ok(
+    !constraints.includes("- [ ]"),
+    "Constraints placeholder must not be a checkbox (it would block /gt next)",
+  );
+  assert.match(constraints, /^<constraints /m);
+  assert.match(template, /^- \[ \] <verifiable item/m);
+});
+
+test("close comments carry evidence and replan gates on a dirty tree", () => {
+  assert.ok(commandSrc.includes("Stage complete. Tests passed:"));
+  assert.ok(commandSrc.includes("Commits: <subjects|none>"));
+  assert.ok(commandSrc.includes("pass: <count|not reported>"));
+  assert.ok(commandSrc.includes("`not reported`"));
+  assert.ok(commandSrc.includes("git status --porcelain"));
+  assert.ok(
+    commandSrc.includes(
+      "Replanjar mesmo assim? responda sim para confirmar.",
+    ),
+  );
+  assert.ok(
+    commandSrc.includes(
+      "o plano novo pode ficar desatualizado em relação ao código não commitado",
+    ),
+  );
 });
 
 test("command body defines every mode", () => {

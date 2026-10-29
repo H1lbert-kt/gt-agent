@@ -52,12 +52,13 @@ Rules that hold in every mode, traceable to `agents/gt.md` or the `Rules` block 
 
 1. The agent never edits, creates or deletes files and never implements — output is plans, issues and status reports.
 2. Never touches issues without the `stage` label.
-3. Planning is exclusive to `/gt plan` and `/gt replan`; the plan is always a NEW comment starting with `<!-- gt:plan -->`. The original description and older plan comments are never rewritten or deleted (`gh issue edit` is only ever used to add/remove labels, or to fix a brand-new issue's title right after `plan new issue` — never `--body`).
+3. Planning is exclusive to `/gt plan` and `/gt replan`; the plan is always a NEW comment starting with `<!-- gt:plan v2 -->` (legacy plans starting with `<!-- gt:plan -->` remain valid and are found by a prefix match — never rewritten). The original description and older plan comments are never rewritten or deleted (`gh issue edit` is only ever used to add/remove labels, or to fix a brand-new issue's title right after `plan new issue` — never `--body`).
 4. Stage dependencies are NATIVE GitHub issue dependencies (`addBlockedBy` via `gh api graphql`), never a `Blocked by #N` text line in a body.
 5. No duplicate stages: the kickoff refuses while open `stage` issues exist; `plan new issue` checks every existing stage issue (open and closed) before creating.
-6. A stage closes only when every `- [ ]` in description + comments is checked AND the plan's `Test command:` tests pass AND `git status --porcelain` is clean. Exactly two exceptions: `/gt skip` (explicit owner confirmation, closes as `not planned`, no tests) and `/gt close stage` (owner picks the issue, tests are the gate, unchecked boxes only reported).
+6. A stage closes only when every `- [ ]` in description + comments is checked AND the plan's `Test command:` tests pass AND `git status --porcelain` is clean. Exactly two exceptions: `/gt skip` (explicit owner confirmation, closes as `not planned`, no tests) and `/gt close stage` (owner picks the issue, tests are the gate, unchecked boxes only reported). Every close carries evidence in the comment: test command, pass count (`not reported` when the runner prints none) and the `(#N)` commit subjects (`none` when there are none).
 7. `--dry-run` never writes anything to GitHub; the read-only modes (`help`, `status`, `verify`, `log`, `start`) never write either (`start` never writes at all).
 8. State lives in GitHub issues, not conversation memory: `/gt` runs as a subagent (`subtask: true`) with no memory between runs.
+9. `/gt replan` never writes a plan over uncommitted work: a dirty `git status --porcelain` warns (`o plano novo pode ficar desatualizado em relação ao código não commitado`), asks `Replanjar mesmo assim? responda sim para confirmar.` and stops with nothing written unless the owner clearly confirms.
 
 ## Commits and /cp
 

@@ -25,7 +25,7 @@ Cause: kickoff runs `gh issue list --label stage --state open` and refuses while
 The issue lists them and stops. Items are counted across the description and every comment (lines starting with `- [ ]` / `* [ ]`; fenced code blocks and the plan's own footer sentence are ignored). Fix: implement each item in build mode and check it off; checked boxes alone still are not enough — tests and a clean tree are required too.
 
 **No test command defined**
-The stage is unverifiable: the plan comment (the last one containing the marker `<!-- gt:plan -->`) must carry a non-empty `Test command:` line inside its `## Tests` section. Fix with `/gt replan <N>`. Only when no plan defines one does `/gt next` fall back to the project's own test script — and only if the project clearly defines one.
+The stage is unverifiable: the plan comment (the LAST comment whose first line starts with `<!-- gt:plan` — current `<!-- gt:plan v2 -->` or legacy `<!-- gt:plan -->`) must carry a non-empty `Test command:` line inside its `## Tests` section. Fix with `/gt replan <N>`. Only when no plan defines one does `/gt next` fall back to the project's own test script — and only if the project clearly defines one.
 
 **Test files or command do not exist**
 The plan was not fully implemented — build mode must create the test files the plan names. Fix: implement them, then re-run.
@@ -42,6 +42,14 @@ No subject in `git log --oneline -50` ends with `(#<N>)` for this stage. This is
 **Next stage unplanned (after a close)**
 After closing N, if the next open stage M has no `planned` label, `/gt next` prints `Etapa <M> ainda não planejada — rode /gt plan <M>.` and stops. Run `/gt plan <M>` — `/gt next` never plans the next stage itself.
 
+## /gt replan refuses
+
+**Dirty working tree**
+`git status --porcelain` printed files, so a new plan would be written over uncommitted work and could go stale against the code. `/gt replan` warns `o plano novo pode ficar desatualizado em relação ao código não commitado`, asks `Replanjar mesmo assim? responda sim para confirmar.` and stops without writing anything (the previous plan comment and the `planned` label stay untouched) unless you clearly answer yes. Fix: commit first via `/cp gt`, then re-plan.
+
+**Issue without `stage` label / closed stage**
+The issue does not exist, lacks the `stage` label, or is already closed → STOP. Reopen it first with `/gt reopen <N>`; `/gt` never touches other issues.
+
 ## /gt close stage and /gt verify
 
 **`/gt close stage` refusals**
@@ -50,7 +58,7 @@ After closing N, if the next open stage M has no `planned` label, `/gt next` pri
 - Failing tests → listed, not closed.
 - Dirty working tree → stops; commit via `/cp gt` first.
 
-Gate difference: `/gt close stage` is owner-driven — you pick the issue and tests passing is the gate; unchecked boxes are only reported as a note. The close comment is `Stage complete. Tests passed: \`<test command>\`` (plus the pass count in the report). The alternative, `/gt next`, applies the full gate: every `- [ ]` checked AND tests pass AND tree clean, then closes with `Stage complete.`
+Gate difference: `/gt close stage` is owner-driven — you pick the issue and tests passing is the gate; unchecked boxes are only reported as a note. Both closes now carry the same evidence comment: `Stage complete. Tests passed: \`<test command>\` — pass: <count|not reported>. Commits: <subjects|none>.` (`not reported` when the runner prints no count, `none` when no commit carries `(#N)`). The difference is the gate itself: `/gt next` applies the full gate — every `- [ ]` checked AND tests pass AND tree clean — while `/gt close stage` only requires the tests and a clean tree.
 
 **`/gt verify <N>` refusals**
 - The issue does not exist or does not have the `stage` label → STOP; `/gt` never touches other issues.
@@ -64,6 +72,6 @@ Otherwise `/gt verify` is a pure dry-run: it reports the `planned` label, the te
 
 ## Keeping the docs in sync
 
-`agents/gt.md` and `commands/gt.md` are **byte-copies** of the owner's live opencode config and the source of truth. README and the files under `docs/` are derived from them, and the structural tests check quoted literals and heading order — not prose fidelity. If the live config changes, the docs go stale: re-run the consistency sweep (13 modes and syntaxes, refusal strings, plan format with its `<!-- gt:plan -->` marker and `Test command:` line, the three labels, the close gate and its two exceptions) and fix the doc files only — never the two source files.
+`agents/gt.md` and `commands/gt.md` are **byte-copies** of the owner's live opencode config and the source of truth. README and the files under `docs/` are derived from them, and the structural tests check quoted literals and heading order — not prose fidelity. If the live config changes, the docs go stale: re-run the consistency sweep (13 modes and syntaxes, refusal strings, plan format v2 with its `<!-- gt:plan v2 -->` marker, the `<!-- gt:plan -->` legacy fallback, `## Constraints` and the `Test command:` line, the evidence close comment, the replan dirty-tree refusal, the three labels, the close gate and its two exceptions) and fix the doc files only — never the two source files.
 
 Doc map: [usage.md](usage.md) for the per-mode reference, [example.md](example.md) for the worked walkthrough, [safety.md](safety.md) for permissions, the repo guard and invariants, and the [README](../README.md) for install and quick start.

@@ -10,7 +10,7 @@ Human-readable companion to `commands/gt.md` (the machine-readable source of tru
 
 ## Plan marker
 
-A stage plan is always a NEW comment starting with `<!-- gt:plan -->`, using fixed headings (Goal, Scope, Technical approach, Implementation steps, Tests, Acceptance criteria, Risks) and a non-empty `Test command:` line. An issue's original description is never rewritten; old plans stay as history. Modes `next`, `verify` and `close stage` find a stage's test command by taking the LAST comment with the marker and reading its `Test command:` line — never guessing a command.
+A stage plan is always a NEW comment starting with the marker `<!-- gt:plan v2 -->`, using fixed headings (Goal, Scope, Included, Not included, Constraints, Technical approach, Implementation steps, Tests, Acceptance criteria, Risks) and a non-empty `Test command:` line. `## Constraints` holds the rules inherited from the project's AGENTS.md/README that bound the technical approach, as a plain placeholder line (never a `- [ ]` item, which would block `/gt next` forever); acceptance criteria must be verifiable — a named command, a file/line, or an observable behavior. Plans written by older versions start with `<!-- gt:plan -->` and stay valid: every lookup matches the prefix `<!-- gt:plan`, so legacy plans keep working and are never rewritten. An issue's original description is never rewritten; old plans stay as history. Modes `next`, `verify` and `close stage` find a stage's test command by taking the LAST comment with the marker and reading its `Test command:` line — never guessing a command.
 
 ## Stage dependencies
 
@@ -33,7 +33,7 @@ The `--dry-run` flag on `/gt plan` is also read-only: it drafts plans in the con
 These modes write to GitHub:
 
 - **kickoff** (`/gt <repo> <prompt>`) — creates stage issues with the `stage` label and native dependencies.
-- **plan** (`/gt plan …`) — appends plan comments (`<!-- gt:plan -->`) and adds the `planned` label; `plan new issue` also creates new stage issues.
+- **plan** (`/gt plan …`) — appends plan comments (`<!-- gt:plan v2 -->`) and adds the `planned` label; `plan new issue` also creates new stage issues.
 - **next** (`/gt next`) — closes the current stage when the gate passes.
 - **skip** (`/gt skip`) — comments, adds `skipped`, closes as `not planned` (after confirmation).
 - **close stage** (`/gt close stage`) — closes an owner-chosen open stage when tests pass.
@@ -63,14 +63,14 @@ Every mode runs against the repository of the current directory (repo guard: `gi
 
 - Syntax: `/gt plan <N>` · `/gt plan stage <N>` · `/gt plan all` · `/gt plan new issue <prompt>` · any of these with `--dry-run`.
 - Reads: whole project analysis, the stage issue's description and comments, stage history.
-- Writes: appends a plan comment (`<!-- gt:plan -->`) and adds `planned`; `plan new issue` creates new stage issues (label `stage`, no `planned`).
+- Writes: appends a plan comment (`<!-- gt:plan v2 -->`) and adds `planned`; `plan new issue` creates new stage issues (label `stage`, no `planned`).
 - Refuses: issue without `stage` label; already-planned stage (use `/gt replan <N>`); `--dry-run` never writes anything.
 
 ### /gt next
 
 - Syntax: `/gt next`.
 - Reads: lowest open `stage` issue, its checkboxes (description + comments), its plan's `Test command:` line, git state.
-- Writes: closes the stage with a `Stage complete.` comment when the gate passes.
+- Writes: closes the stage with an evidence comment — `Stage complete. Tests passed: \`<test command>\` — pass: <count|not reported>. Commits: <subjects|none>.` — when the gate passes.
 - Refuses: unplanned stage; any unchecked `- [ ]`; no test command defined; failing tests; dirty working tree (`git status --porcelain`). Never plans the next stage itself.
 
 ### /gt skip
@@ -97,9 +97,9 @@ Every mode runs against the repository of the current directory (repo guard: `gi
 ### /gt replan \<N\>
 
 - Syntax: `/gt replan <N>`.
-- Reads: whole project analysis, issue N's description and plan history; asks for a one-line reason (optional).
-- Writes: appends a NEW plan comment; ensures `planned` is present.
-- Refuses: issue without `stage` label; closed stage (use `/gt reopen <N>` first). Never deletes old plans.
+- Reads: whole project analysis, issue N's description and plan history, git state (`git status --porcelain`); asks for a one-line reason (optional).
+- Writes: appends a NEW plan comment (`<!-- gt:plan v2 -->`); ensures `planned` is present.
+- Refuses: issue without `stage` label; closed stage (use `/gt reopen <N>` first); a dirty working tree — it warns `o plano novo pode ficar desatualizado em relação ao código não commitado`, asks `Replanjar mesmo assim? responda sim para confirmar.` and stops without writing anything unless confirmed. Never deletes old plans.
 
 ### /gt retro \<N\>
 
@@ -119,7 +119,7 @@ Every mode runs against the repository of the current directory (repo guard: `gi
 
 - Syntax: `/gt close stage`.
 - Reads: open `stage` issues (owner picks one), its plan's `Test command:` line, git state.
-- Writes: closes the chosen stage with a `Stage complete. Tests passed:` comment.
+- Writes: closes the chosen stage with an evidence comment — `Stage complete. Tests passed: \`<test command>\` — pass: <count|not reported>. Commits: <subjects|none>.`
 - Refuses: no test command defined; failing tests; dirty working tree (tell owner to commit via `/cp gt` first). Owner-driven: the gate is tests passing; unchecked boxes are only reported.
 
 ### /gt reopen \<N\>
