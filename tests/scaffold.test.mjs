@@ -24,10 +24,10 @@ test("agent frontmatter keeps safety permissions", () => {
   assert.match(frontmatter, /"git commit\*":\s*deny/);
 });
 
-test("command frontmatter wires the agent as subtask", () => {
+test("command frontmatter runs the agent as primary", () => {
   const frontmatter = commandSrc.split("---\n")[1];
   assert.match(frontmatter, /agent:\s*gt/);
-  assert.match(frontmatter, /subtask:\s*true/);
+  assert.doesNotMatch(frontmatter, /sub\s?task:\s*true/);
 });
 
 test("command body contains the plan format", () => {

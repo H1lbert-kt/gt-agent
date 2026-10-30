@@ -1,7 +1,6 @@
 ---
 description: Stage issues workflow: /gt <repo> <prompt>, /gt plan all|<N>|new issue <prompt> [--dry-run], /gt next, /gt status, /gt verify <N>, /gt replan <N>, /gt impact <N>, /gt retro <N>, /gt log, /gt skip, /gt close stage, /gt reopen <N>, /gt start, /gt doctor, /gt help
 agent: gt
-subtask: true
 ---
 
 Arguments: $ARGUMENTS
