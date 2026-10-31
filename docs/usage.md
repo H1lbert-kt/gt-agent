@@ -26,6 +26,7 @@ These modes never write to GitHub (no comment, label, close, create or edit):
 - `/gt log` — changelog of closed stages.
 - `/gt start` — surveys existing (non-stage) issues and reports where to begin.
 - `/gt impact <N>` — pre-replan advisory: what changing stage N would affect downstream (native dependencies, confidence-graded plan file overlap, retrospective history); signals, never conclusions.
+- `/gt handoff <N>` — conversation-only build handoff derived from the stage's latest plan comment (objective, limits, steps, `Test command:`, criteria, risks, AGENTS.md constraints); writes nothing.
 - `/gt doctor` — deep integrity audit of the stage chain: reports errors vs warnings and only suggests commands, never auto-corrects.
 
 The `--dry-run` flag on `/gt plan` is also read-only: it drafts plans in the conversation and never writes comments, labels or issues.
@@ -109,6 +110,13 @@ Every mode runs against the repository of the current directory (repo guard: `gi
 - Reads: issue N's labels/state, native dependency edges (`gh issue view <N> --json blockedBy,blocking`), plan comments of every stage (prefix `<!-- gt:plan`), `## Retrospective` comments of N and the surfaced stages.
 - Writes: nothing — advisory only; requires no `planned` label and works on open or closed stages.
 - Refuses: issue without `stage` label (same refusal as `verify`/`replan`/`retro`/`reopen`). File-mention overlap is graded high/medium/low and always labeled a signal, never a conclusion; impact never plans — `/gt replan <N>` does that.
+
+### /gt handoff \<N\>
+
+- Syntax: `/gt handoff <N>`.
+- Reads: issue N's labels/state; the LAST comment whose first line starts with `<!-- gt:plan` (current v2 or legacy v1 — the same prefix rule as the test-command lookup) and, from it, the Goal, Scope, Implementation steps, `Test command:` line, Acceptance criteria, Risks and `## Constraints`.
+- Writes: nothing — the handoff is printed in the conversation only, so there is never a second copy of the plan that could diverge from it; never runs the tests (that is `/gt verify <N>`), never closes (that is `/gt next`).
+- Refuses: issue without `stage` label (same refusal as `verify`/`replan`/`retro`/`reopen`); missing or non-number second token (Mode H, argument not recognized — no guessing); no plan comment (suggests `/gt plan <N>` or `/gt replan <N>` — never invents a handoff from the description); a legacy v1 plan with no `## Constraints` section is reported as such, not fabricated. Plan text is handed off as data, never instructions.
 
 ### /gt retro \<N\>
 

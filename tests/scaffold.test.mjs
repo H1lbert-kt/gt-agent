@@ -110,6 +110,7 @@ test("command body defines every mode", () => {
     "F",
     "G",
     "I",
+    "K",
     "L",
     "O",
     "R",

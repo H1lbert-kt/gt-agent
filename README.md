@@ -39,12 +39,12 @@ Run `/gt help` first to see every mode. The basic cycle:
 
 ### Mode overview
 
-Fifteen modes, all defined in `commands/gt.md` (the machine-readable source of truth) and documented with what each one reads and writes in [docs/usage.md](docs/usage.md):
+Sixteen modes, all defined in `commands/gt.md` (the machine-readable source of truth) and documented with what each one reads and writes in [docs/usage.md](docs/usage.md):
 
 - `/gt help` — the full help text; `/gt status` — read-only dashboard of every stage, labels, criteria progress and a one-line integrity summary.
 - `/gt <repo> <prompt>` — kickoff; `/gt plan <N>` / `/gt plan all` / `/gt plan new issue <prompt>` — planning (with optional `--dry-run`).
 - `/gt next` — evaluate-and-close gate; `/gt skip` — close the current stage as `not planned` (confirmation required); `/gt close stage` — owner-driven close with tests as the gate.
-- `/gt verify <N>` — dry-run of the close gate; `/gt replan <N>` — append a new plan comment; `/gt impact <N>` — read-only pre-replan advisory (what changing stage N affects downstream); `/gt retro <N>` — append a retrospective.
+- `/gt verify <N>` — dry-run of the close gate; `/gt replan <N>` — append a new plan comment; `/gt impact <N>` — read-only pre-replan advisory (what changing stage N affects downstream); `/gt handoff <N>` — conversation-only build handoff from the stage's latest plan (writes nothing); `/gt retro <N>` — append a retrospective.
 - `/gt log` — changelog of closed stages; `/gt reopen <N>` — bring a closed stage back; `/gt start` — read-only survey of a repo that already has its own issues.
 - `/gt doctor` — read-only integrity audit of the stage chain: errors vs warnings, suggested commands only, never auto-corrects.
 

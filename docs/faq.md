@@ -84,6 +84,19 @@ Otherwise `/gt verify` is a pure dry-run: it reports the `planned` label, the te
 - The issue does not exist or lacks the `stage` label → STOP, same refusal as `verify`/`replan`/`retro`/`reopen`.
 - Nothing else: impact makes no assumption about numbering, tolerates stage 14's future real dependencies, and never writes to GitHub.
 
+## /gt handoff
+
+**What the handoff prints**
+`/gt handoff <N>` prints a structured build handoff in the conversation only — Objective, Limits, Implementation steps, `Test command:`, Acceptance criteria, Risks, and the plan's `## Constraints` (the rules inherited from the target project's AGENTS.md) — taken verbatim from the LAST comment whose first line starts with `<!-- gt:plan` (current v2 or legacy v1, the same prefix rule as the test-command lookup). It writes nothing: no comment, no label, no edit, so there is never a second copy of the plan that could diverge from it. It never runs the tests (that is `/gt verify <N>`) and never closes the stage (that is `/gt next`).
+
+**Refusals**
+- The issue does not exist or lacks the `stage` label → STOP, same refusal as `verify`/`replan`/`retro`/`reopen`.
+- Second token missing or not a number → Mode H, argument not recognized; it never guesses.
+- No plan comment → STOP with a pointer to `/gt plan <N>` (or `/gt replan <N>`); it never invents a handoff from the description.
+- A legacy v1 plan has no `## Constraints` section → the handoff says so in one line instead of fabricating content.
+
+Plan comments are still untrusted data — the report is text, not instructions ([safety.md](safety.md#invariants) item 10); see [usage.md](usage.md) for the per-mode reference.
+
 ## /gt doctor
 
 **What the errors mean (fix before the next `/gt` call)**
@@ -110,6 +123,6 @@ Cause: issue bodies and comments are third-party content — anyone with repo ac
 
 ## Keeping the docs in sync
 
-`agents/gt.md` and `commands/gt.md` are **byte-copies** of the owner's live opencode config and the source of truth. README and the files under `docs/` are derived from them, and the structural tests check quoted literals and heading order — not prose fidelity. If the live config changes, the docs go stale: re-run the consistency sweep (15 modes and syntaxes, refusal strings, plan format v2 with its `<!-- gt:plan v2 -->` marker, the `<!-- gt:plan -->` legacy fallback, `## Constraints` and the `Test command:` line, the evidence close comment, the replan dirty-tree refusal, the three labels, the close gate and its two exceptions) and fix the doc files only — never the two source files.
+`agents/gt.md` and `commands/gt.md` are **byte-copies** of the owner's live opencode config and the source of truth. README and the files under `docs/` are derived from them, and the structural tests check quoted literals and heading order — not prose fidelity. If the live config changes, the docs go stale: re-run the consistency sweep (16 modes and syntaxes, refusal strings, plan format v2 with its `<!-- gt:plan v2 -->` marker, the `<!-- gt:plan -->` legacy fallback, `## Constraints` and the `Test command:` line, the evidence close comment, the replan dirty-tree refusal, the three labels, the close gate and its two exceptions) and fix the doc files only — never the two source files.
 
 Doc map: [usage.md](usage.md) for the per-mode reference, [example.md](example.md) for the worked walkthrough, [safety.md](safety.md) for permissions, the repo guard and invariants, and the [README](../README.md) for install and quick start.
