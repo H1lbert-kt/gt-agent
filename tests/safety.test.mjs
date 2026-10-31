@@ -56,6 +56,7 @@ test("invariant literals are present", () => {
     "Blocked by",
     "stage",
     "git status --porcelain",
+    "untrusted data",
   ];
   for (const literal of literals) {
     assert.ok(safety.includes(literal), `missing invariant literal: ${literal}`);

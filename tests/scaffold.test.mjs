@@ -30,6 +30,10 @@ test("command frontmatter runs the agent as primary", () => {
   assert.doesNotMatch(frontmatter, /sub\s?task:\s*true/);
 });
 
+test("agent body treats issue content as untrusted data", () => {
+  assert.ok(agentSrc.includes("untrusted data"));
+});
+
 test("command body contains the plan format", () => {
   assert.ok(commandSrc.includes("<!-- gt:plan v2 -->"));
   assert.ok(commandSrc.includes("<!-- gt:plan -->"));
