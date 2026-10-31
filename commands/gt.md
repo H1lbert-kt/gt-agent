@@ -88,8 +88,9 @@ Do NOT run any command, read any file, or call `gh`. Print exactly the text belo
 CICLO BÁSICO
   /gt <repo> <prompt>
         Kickoff. Cria uma issue por etapa a partir do prompt, em ordem, com
-        label `stage` e dependência nativa do GitHub (cada issue bloqueada
-        pela anterior via `addBlockedBy`, nunca linha de texto no corpo).
+        label `stage` e dependências reais via `addBlockedBy` (análise do
+        prompt + código; etapas independentes ficam sem aresta, nunca linha
+        de texto no corpo).
         <repo> = URL ou owner/repo,
         precisa ser o remoto `origin` da pasta atual.
         As issues saem SEM o label `planned` — planejar é papel do /gt plan.
@@ -193,11 +194,11 @@ DICAS
    - Title: `Stage N: <name>`
    - Body of the first issue: `## Request from owner` with the prompt quoted, then a short Goal and a brief acceptance checklist as `- [ ]` (the detailed plan comes later from `/gt plan`).
    - Body of the following issues: a one-line reference to the kickoff prompt (e.g. `Kickoff prompt: see #<first issue number>`), a short Goal and a brief `- [ ]` checklist. Do NOT write a `Blocked by #N` text line in any body — the dependency is native GitHub (next item).
-   - After creating each issue beyond the first, record it as blocked by the previous stage issue with the native GitHub dependency:
-     `gh api graphql -f query='mutation { addBlockedBy(input: {issueId: "<node-id-of-the-issue-being-blocked>", blockingIssueId: "<node-id-of-the-previous-stage-issue>"}) { issue { number } } }'`
-     Get node IDs with `gh issue view <N> --json id`; verify with `gh issue view <N> --json blockedBy`. The first issue of the chain gets no dependency. If a dependency step fails, say so explicitly.
+   - For each new stage, decide from the prompt + the whole-project analysis (step 4) whether a dependency is REAL: the stage consumes an artifact another stage produces, it edits files the other stage must land first, or the prompt states that order. Link ONLY real dependencies with the native GitHub dependency:
+     `gh api graphql -f query='mutation { addBlockedBy(input: {issueId: "<node-id-of-the-issue-being-blocked>", blockingIssueId: "<node-id-of-the-blocking-stage-issue>"}) { issue { number } } }'`
+     Get node IDs with `gh issue view <N> --json id`; verify with `gh issue view <N> --json blockedBy`. An independent stage gets NO edge — a blind predecessor chain is never created. If a dependency step fails, say so explicitly.
 8. If issue creation or dependency linking failed halfway, say so explicitly and list the issues that were created/linked before the failure (I must clean up or retry by hand; the next kickoff refuses while open `stage` issues exist).
-9. Print a table: stage, issue number, title. Then tell me to run `/gt plan 1` (or `/gt plan all`) when I am ready to plan. STOP. Do not plan in detail yet.
+9. Print a table: stage, issue number, title, dependency (which stage blocks it via `addBlockedBy`, or `none` for independent work — this is the wiring the analysis chose, visible immediately). Then tell me to run `/gt plan 1` (or `/gt plan all`) when I am ready to plan. STOP. Do not plan in detail yet.
 
 ## Mode B: `next` (evaluates and closes; never plans, never edits code)
 
@@ -265,7 +266,7 @@ The owner is in the project and wants to add new issues from an ad-hoc prompt. T
    - Stage number: continue the sequence — highest `Stage N` among existing stage issues + 1 for the first new issue, +1 per subsequent new issue. GitHub assigns the actual issue numbers: predict them as (highest issue number in the repo, any type) + 1, +1 per new issue. After creating each issue, if the assigned number differs from the number in its title, fix the title immediately with `gh issue edit <number> --title "Stage <number>: <name>"`.
    - Title: `Stage N: <name>` with a short name, matching the repo's existing stage-title style.
    - Body content: a short Goal and a brief acceptance checklist as `- [ ]`, grounded in the shared whole-project analysis (name real files and conventions). The detailed plan comes later from `/gt plan <N>` — do not write plans, scope, test commands or acceptance detail beyond a brief checklist here.
-   - Dependency: by default chain with the NATIVE GitHub issue dependency (the first new issue is blocked by the highest existing stage issue; each subsequent new issue by the one created just before it), using the same `gh api graphql` `addBlockedBy` mutation as Mode A — never a `Blocked by #N` text line in the body. Drop or rewire the dependency when the prompt or the analysis shows that work is independent or depends on something else. You decide.
+   - Dependency: decide REAL dependencies from the prompt and the whole-project analysis — link a new stage (or an existing one) with the NATIVE GitHub issue dependency (`gh api graphql` `addBlockedBy`, same mutation as Mode A) only when the work truly depends on it (consumes its artifact, edits the same files it must land first, or the prompt states the order). An independent stage gets NO edge — a blind predecessor chain is never created. Never a `Blocked by #N` text line in the body.
 5. Duplicate guard: for each issue you would create, check the existing `stage` issues (open and closed) from step 3. If one already covers the same goal, do not recreate it — skip that one and say which existing issue it matched. If all would be duplicates, STOP without creating anything.
 6. If the dry-run flag is set: print your decisions, the drafted table (stage, issue number, title) and each proposed body in this conversation, and STOP. Do not create anything, do not comment, do not add or create labels.
 7. Ensure the labels exist, each with `--force` (without it a second run fails on the first label that already exists): `gh label create stage --force`, `gh label create planned --force`, `gh label create skipped --force`.
@@ -404,13 +405,13 @@ Audits drift made outside the agent (a label removed by hand, a dependency delet
 2. Errors — a later `/gt` call breaks or silently degrades; report each with its suggested command:
    - **E1** a `planned` stage whose LAST comment whose first line starts with `<!-- gt:plan` is missing, or that comment has no non-empty `Test command:` line — `/gt next`, `/gt close stage` and `/gt verify` cannot verify it. Suggest: `/gt replan <M>`.
    - **E2** that plan comment's headings violate the fixed order (Goal, Scope, Included, Not included, Constraints, Technical approach, Implementation steps, Tests, Acceptance criteria, Risks) — the parser reads them positionally. Suggest: `/gt replan <M>`.
-   - **E3** the `blockedBy` chain diverges from stage numbering: stage N (above the lowest stage number) is not blocked by stage N-1 when stage N-1 exists. Suggest the owner rewire it manually (doctor never writes).
+   - **E3** a `blockedBy` edge whose blocking issue is not among the `stage` issues (wrong target, renamed or deleted issue) — the dependency graph drifted from the stage set. Suggest the owner rewire it manually (doctor never writes).
    - **E4** an OPEN stage issue carrying the `skipped` label — `/gt skip` always closes as `not planned`, so the label state diverged from the close. Suggest: `gh issue edit <M> --remove-label skipped`, or close the stage.
    - **E5** a plan comment whose `## Constraints` section contains a `- [ ]` item — it would stay unchecked forever and block `/gt next`. Suggest: `/gt replan <M>`.
 3. Warnings — degraded but working; the owner should know:
    - **W1** an open stage without `planned` — normal lifecycle for stages beyond the current one. Suggest `/gt plan <M>` for the lowest open stage only.
    - **W2** a closed stage with no subject ending `(#<M>)` in `git log --oneline -50` — mirrors Mode B's non-blocking consistency warning with the same 50-line window, so doctor can never contradict `/gt next`.
-   - **W3** a skipped stage (closed `not planned`) whose dependents were never re-wired: the stage after it should be blocked by the stage before it. Suggest the owner rewire manually. **Dedupe:** when a blockedBy divergence (E3) is explained by a skipped stage in between, report W3 once and suppress E3 for that edge — one situation, one finding, one suggested fix.
+   - **W3** a skipped stage (closed `not planned`) that still carries `blocking` edges to open dependents — report it once as a reminder to verify those dependents did not actually need the skipped work. Suggest the owner review the edges manually (doctor never writes). **Dedupe:** an edge that is both a skipped-stage leftover and points to a non-stage target is reported once as E3, never twice.
    - **W4** orphan checkboxes — `- [ ]` / `- [x]` lines in comments that are neither plan comments (no `<!-- gt:plan` first line) nor `## Retrospective` comments; they silently feed the checkbox gate of Modes B/E/V.
    - **W5** inconsistent labels — a closed stage missing `planned` while not closed as `not planned`.
 4. Report: errors first (each with its suggested command), then warnings, then a closing line restating the contract above; if there is nothing to report, say the chain is healthy. STOP — doctor writes nothing, ever.

@@ -10,7 +10,7 @@ Prerequisites are already in place: opencode installed with `agents/gt.md` and `
 
 The cycle from Mode H's FLUXO, in order:
 
-1. `/gt <repo> <prompt>` — **kickoff (Mode A)**. Creates one stage issue per stage with the `stage` label (never `planned`) and chains them with native GitHub dependencies. Refuses to run if open `stage` issues already exist.
+1. `/gt <repo> <prompt>` — **kickoff (Mode A)**. Creates one stage issue per stage with the `stage` label (never `planned`) and links them with native `addBlockedBy` edges only where the analysis finds a real dependency (independent stages get no edge). Refuses to run if open `stage` issues already exist.
 2. `/gt plan all --dry-run` — **plan, dry-run (Mode D)**. Drafts plans in the conversation only; writes nothing to GitHub. Optional.
 3. `/gt plan 1` — **plan (Mode D)**. Appends the plan as a new `<!-- gt:plan -->` comment and adds the `planned` label. Never rewrites the original description. See [Sample outputs](#sample-outputs).
 4. Build mode — implement the stage; commits only via `/cp gt` (the commit subject references the stage with `(#<number>)`).

@@ -16,6 +16,9 @@ Cause: kickoff runs `gh auth status` first and stops on failure. Fix: run `gh au
 **"Kickoff says stage issues already exist"**
 Cause: kickoff runs `gh issue list --label stage --state open` and refuses while any stage issue is open — duplicates are never created. Fix: use `/gt status` on the existing chain instead, or `/gt skip` / `/gt next` to finish it first.
 
+**"Kickoff did not block every new stage on the previous one — is that a bug?"**
+No. Since Phase 1 of real dependencies, kickoff and `plan new issue` link stages only where the prompt + the whole-project analysis find a real dependency (a stage consumes another's artifact, must land its files first, or the prompt states the order); independent stages get no `addBlockedBy` edge, so they are not artificially blocked. The step-9 table shows the dependency each stage got. Fix: none needed — if the wiring looks wrong, rewire by hand with the same `addBlockedBy` mutation doctor suggests (`gh api graphql`); `/gt next` still advances the lowest open stage.
+
 ## /gt next refuses
 
 **Unplanned stage**
@@ -102,14 +105,14 @@ Plan comments are still untrusted data — the report is text, not instructions 
 **What the errors mean (fix before the next `/gt` call)**
 - **E1** a `planned` stage has no valid plan comment (first line starting `<!-- gt:plan`) or that comment lacks a non-empty `Test command:` line → `next`/`close stage`/`verify` cannot verify it. Fix: `/gt replan <M>`.
 - **E2** that plan's headings are out of the fixed order → the parser reads them positionally. Fix: `/gt replan <M>`.
-- **E3** the native `blockedBy` chain diverges from stage numbering (stage N not blocked by stage N-1) → the owner rewires manually; doctor never writes.
+- **E3** a `blockedBy` edge points to an issue that is not a `stage` issue (wrong target, renamed or deleted) → the graph drifted from the stage set; the owner rewires manually; doctor never writes.
 - **E4** an OPEN stage carries the `skipped` label → `/gt skip` always closed stages, so the label state diverged. Fix: `gh issue edit <M> --remove-label skipped` or close it.
 - **E5** a `- [ ]` item sits inside a plan's `## Constraints` → it would stay unchecked forever and block `/gt next`. Fix: `/gt replan <M>`.
 
 **What the warnings mean (degraded but working)**
 - **W1** open stage without `planned` — the normal lifecycle for stages beyond the current one (suggests `/gt plan <M>` for the lowest open only).
 - **W2** closed stage with no `(#<M>)` subject in `git log --oneline -50` — the same 50-line window `/gt next` warns about, so doctor never contradicts it.
-- **W3** a skipped stage whose dependents were never re-wired — dedupe: this replaces E3 when a skip explains the divergence.
+- **W3** a skipped stage still carrying edges to open dependents — a reminder to verify those dependents did not actually need the skipped work; the owner reviews the edges manually (an edge that is both a leftover and points to a non-stage target is reported once as E3, never twice).
 - **W4** orphan checkboxes in comments that are neither plan nor retrospective comments — they silently feed the checkbox gate.
 - **W5** a closed stage missing `planned` while not closed as `not planned`.
 

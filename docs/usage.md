@@ -14,7 +14,7 @@ A stage plan is always a NEW comment starting with the marker `<!-- gt:plan v2 -
 
 ## Stage dependencies
 
-Stage issues are chained with NATIVE GitHub issue dependencies via the `addBlockedBy` GraphQL mutation (`gh api graphql`), never a `Blocked by #N` text line in an issue body. Node IDs come from `gh issue view <N> --json id`; verification via `--json blockedBy`. Bodies stay untouched.
+Stage issues are linked with NATIVE GitHub issue dependencies via the `addBlockedBy` GraphQL mutation (`gh api graphql`), never a `Blocked by #N` text line in an issue body. The edges encode REAL dependencies — decided at creation time by kickoff (`/gt <repo> <prompt>`) and `plan new issue` from the prompt plus the whole-project analysis (a stage consumes another's artifact, must land its files first, or the prompt states the order); an independent stage gets no edge, so a blind predecessor chain is never created. Node IDs come from `gh issue view <N> --json id`; verification via `--json blockedBy`. Bodies stay untouched; the owner rewires any edge by hand with the same mutation (doctor only suggests).
 
 ## Read-only modes
 
@@ -59,7 +59,7 @@ Every mode runs against the repository of the current directory (repo guard: `gi
 
 - Syntax: `/gt <owner/repo|URL> <prompt>`.
 - Reads: whole project (AGENTS.md, README, code, tests, git state), existing issues.
-- Writes: one issue per stage (label `stage`, no `planned`), labels `stage`/`planned`/`skipped` (created if missing), native `addBlockedBy` dependencies between consecutive stages.
+- Writes: one issue per stage (label `stage`, no `planned`), labels `stage`/`planned`/`skipped` (created if missing), real-dependency `addBlockedBy` edges decided from the prompt + code analysis (none for independent stages); the step-9 table shows the dependency each stage got.
 - Refuses: repo-guard mismatch (argument repo ≠ origin), no prompt, open `stage` issues already present (no duplicates).
 
 ### /gt plan
@@ -158,4 +158,4 @@ Every mode runs against the repository of the current directory (repo guard: `gi
 - Syntax: `/gt doctor` (no further arguments).
 - Reads: all `stage` issues (open + closed: body, comments, labels, state, native `blockedBy`), `git log --oneline -50`, `git status --porcelain`.
 - Writes: nothing — report only, never auto-corrects (suggests commands instead).
-- Refuses: nothing beyond the repo guard. Errors (E1-E5): `planned` stage without a valid plan comment / `Test command:` line; plan heading order violated; `blockedBy` chain diverging from stage numbering; `skipped` label on an open stage; a `- [ ]` item inside `## Constraints`. Warnings (W1-W5): open stage without `planned`; closed stage with no `(#N)` commit; skipped stage with unwired dependents; orphan checkboxes; inconsistent labels. A skip-induced chain gap is reported once as W3, not as E3.
+- Refuses: nothing beyond the repo guard. Errors (E1-E5): `planned` stage without a valid plan comment / `Test command:` line; plan heading order violated; a `blockedBy` edge whose blocking issue is not a `stage` issue; `skipped` label on an open stage; a `- [ ]` item inside `## Constraints`. Warnings (W1-W5): open stage without `planned`; closed stage with no `(#N)` commit; skipped stage still carrying edges to open dependents (verify, don't blindly rewire); orphan checkboxes; inconsistent labels.
