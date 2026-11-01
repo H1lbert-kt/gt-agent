@@ -21,7 +21,7 @@ Stage issues are linked with NATIVE GitHub issue dependencies via the `addBlocke
 These modes never write to GitHub (no comment, label, close, create or edit):
 
 - `/gt help` — prints the built-in help.
-- `/gt status` — dashboard of all stages, current stage, criteria progress, plus a one-line integrity summary when the error-class checks fail.
+- `/gt status` — dashboard of all stages, current stage, criteria progress, plus a one-line integrity summary when the error-class checks fail; when stage issues belong to a GitHub Project, also derived project fields (read-only, best-effort).
 - `/gt verify <N>` — dry-run of the `/gt next` gate: runs the stage's tests, reports criteria and tree state, closes nothing.
 - `/gt log` — changelog of closed stages.
 - `/gt start` — surveys existing (non-stage) issues and reports where to begin.
@@ -86,7 +86,7 @@ Every mode runs against the repository of the current directory (repo guard: `gi
 ### /gt status
 
 - Syntax: `/gt status`.
-- Reads: all `stage` issues (open + closed), checkboxes of open ones, native `blockedBy` dependencies.
+- Reads: all `stage` issues (open + closed), checkboxes of open ones, native `blockedBy` dependencies; optionally, read-only GitHub Projects fields discovered via GraphQL from issue membership (`projectItems` — optional, derived data; nothing is written to any project, issues stay the source of truth).
 - Writes: nothing.
 - Refuses: nothing — read-only dashboard.
 

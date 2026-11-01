@@ -115,7 +115,9 @@ CICLO BÁSICO
 AUXILIARES
   /gt status       Painel: todas as etapas (abertas e fechadas), qual é a
                    atual, labels, % de critérios cumpridos e o que fazer em
-                   seguida.
+                   seguida; quando a issue está em um projeto GitHub, mostra
+                   também campos derivados do projeto (leitura via GraphQL;
+                   issues continuam a fonte de verdade).
   /gt verify <N>   Roda os testes da etapa N e reporta, sem fechar nada e
                    sem mudar nada (dry-run do gate do /gt next).
   /gt replan <N>   Re-plana a etapa N: anexa um novo plano como comentário
@@ -308,8 +310,9 @@ Finish with a summary (one line per planned stage, plus a table of issue number 
 2. Let CURRENT be the lowest-numbered open issue (if any).
 3. For each OPEN issue M, run `gh issue view <M> --json body,comments` and count the `- [x]` checked and `- [ ]` unchecked items across the description and all comments with the shared "reading an issue's checkboxes" section. (For closed issues, show `done` instead.)
 4. Print a table: Stage | Issue | Title | State | Labels | Criteria (e.g. `7/10`, or `done`) | Note (mark CURRENT as `atual`; note `sem plano` if open without `planned`; note the native dependency `Blocked by #X` when present — read it with `gh issue view <M> --json blockedBy`, never from a body text line).
-5. Integrity summary (cheap: compute only the error-class checks E1-E5 from the data already fetched above — no new commands, no git calls). If there is at least one error, print `Integridade: <n> erro(s) — rode /gt doctor para o relatório completo.` The closed-stage `(#N)` warning (W2) stays doctor-only, so the dashboard remains cheap.
-6. End with one line telling me the sensible next action, e.g. `Próximo: /gt plan 4` (unplanned), `Próximo: /gt next` (current stage fully checked) or `Etapa 4 em andamento (3/12 critérios)`. STOP. Do not change anything.
+5. Optional derived GitHub Projects data (read-only, best-effort): when there are open stage issues, run ONE `gh api graphql` query fetching, for each open stage issue, its `projectItems` (project title and number, plus the item's single-select field values such as Status) — issue membership is the only discovery mechanism (no config file, since `edit: deny` rules that out). Surface the result as derived data appended to the dashboard (e.g. a `Projeto:` line per stage that has membership); issues remain the single source of truth and nothing is written to any project. If the query fails (token lacks project access, no Projects access, GraphQL error) or no open stage has membership, print nothing about projects and continue — this optional layer never fails the dashboard.
+6. Integrity summary (cheap: compute only the error-class checks E1-E5 from the data already fetched above — no new commands, no git calls). If there is at least one error, print `Integridade: <n> erro(s) — rode /gt doctor para o relatório completo.` The closed-stage `(#N)` warning (W2) stays doctor-only, so the dashboard remains cheap.
+7. End with one line telling me the sensible next action, e.g. `Próximo: /gt plan 4` (unplanned), `Próximo: /gt next` (current stage fully checked) or `Etapa 4 em andamento (3/12 critérios)`. STOP. Do not change anything.
 
 ## Mode G: `replan <N>` (plan again in one step; never leaves the stage half-updated)
 

@@ -19,7 +19,7 @@ Every setting of the `permission` block in `agents/gt.md`, translated:
 
 The default is `"*": ask` — any command not explicitly listed prompts the user. The allowlist groups into four bands:
 
-- **GitHub reads**: `gh auth status`, `gh repo view*`, `gh issue list/view/create/comment/close/reopen*`, `gh pr list/view*`, `gh label list/create*`, `gh api graphql*` (for the `addBlockedBy` dependency mutations).
+- **GitHub reads**: `gh auth status`, `gh repo view*`, `gh issue list/view/create/comment/close/reopen*`, `gh pr list/view*`, `gh label list/create*`, `gh api graphql*` (for the `addBlockedBy` dependency mutations and for read-only GitHub Projects discovery — issue membership — surfaced as derived data by `/gt status`).
 - **Filesystem reads**: `ls`, `cat *`, `grep *`.
 - **Git reads**: `git log*`, `git status*`, `git diff*`, `git remote get-url*`, `git rev-parse*`.
 - **Test runners**: `pytest*`, `python -m pytest*`, `python3 -m pytest*`, `npm test*`, `npm run test*`, `pnpm test*`, `make test*`, `cargo test*`, `go test*`, `node --test*`.
