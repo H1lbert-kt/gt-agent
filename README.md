@@ -33,18 +33,21 @@ Requirements: OpenCode V2 with skill support, Node.js 20 or newer for the bundle
 @gt plan <request>       Create stages or plan an issue
 @gt build <issue-number> Implement that planned stage
 @gt review               Review changes without writing
+@gt status               Read-only planning/stage overview
+@gt doctor               Read-only planning-integrity audit
 @gt commit               Review and create one commit
 @gt publish              Push existing commits only
+@gt next                 Check gates and close the lowest open stage
 ```
 
 Ask for one operation at a time. An explicit issue number is the target; invalid explicit targets stop rather than falling back. Commands without a target resolve their documented default afresh and never inherit a stage from conversation history. Commit and publish are separate authorizations: a commit never implies publish, and publish never creates a commit. A stage commit uses the explicitly selected issue, or the lowest open stage if omitted, as its final subject token, for example `@gt commit 42` → `feat: add sensors (#42)`. Plain local commits have no stage target.
 
-Planning and build never close a stage automatically. Ask `@gt next` to check the completion gates and close the current stage. Use `@gt status` for a read-only overview. Issue numbers—not stage ordinals—identify stages.
+Plan owns kickoff, stage/dependency creation, planning/replanning, and the status, doctor, impact, handoff, log, retro, skip, and reopen operations. Build owns implementation, code review, implementation verification, commit, publish, and `next` completion gates. `@gt status` and `@gt doctor` are distinct: status summarizes progress; doctor audits planning integrity. Review means code review in Build; `verify` means implementation verification in Build. Neither mode delegates work to another agent. Planning and build never close a stage automatically. Ask `@gt next` to check the completion gates and close the current stage. Issue numbers—not stage ordinals—identify stages.
 
 ## Workflow contract
 
-- **Plan** creates stage issues, records detailed plans as new comments, and marks a stage planned only after validating the comment.
-- **Build** reads the selected plan, implements only its agreed scope, runs validated tests, and reports evidence. It does not invent a fitness function or alter project rules.
+- **Plan** researches, creates stage/dependency issues, records detailed plans as new comments, marks a stage planned only after validating the comment, and owns planning reports and administrative stage management (`skip`/`reopen`). It never implements or performs Git commit/publish operations.
+- **Build** reads the selected plan, implements only its agreed scope, reviews code, verifies implementation, runs validated tests, and reports evidence. It does not create/replan stages or run planning reports, invent a fitness function, or alter project rules.
 - Build may change only a fulfilled `[ ]` checkbox to `[x]` on its selected planned issue, after rereading and verifying a minimal document update; changing prose or other criteria requires separate authorization. Evidence for an individual criterion is reported separately from the suite result: an unrelated suite failure does not undo proven work, but failing/unavailable tests still block normal completion.
 - A new v2 plan is a candidate until a separately verified acceptance receipt links it to the exact plan revision. Replans retain every prior active criterion unless it is explicitly mapped to a replacement or cancelled with specific owner authorization; old issue text/comments remain unchanged and historical items are never checked off to simulate cancellation.
 - `skills/gt/lib/plan-contract.mjs` provides pure local parsers/resolvers used to check plan snapshots, digests, criteria, and explicit stage targets. Its fixtures and behavioral tests run offline with `node --test tests/`; they do not access GitHub or prove model/API behavior.

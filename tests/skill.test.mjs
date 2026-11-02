@@ -15,12 +15,45 @@ const guide = readFileSync(join(root, "docs", "skill.md"), "utf8");
 
 test("skill exposes only plan and build modes without a primary-agent setup", () => {
   assert.match(entry, /^---\nname: gt\ndescription: .+\n---\n/);
-  assert.match(entry, /two modes: \*\*plan\*\* and \*\*build\*\*/);
+  assert.match(entry, /two modes: \*\*plan\*\* and \*\*build\*\*/i);
   assert.doesNotMatch(entry, /agent:|permission:|\$ARGUMENTS|primary agent/);
   assert.match(entry, /Do not run the retired `\/gt` or `\/cp` commands/);
   assert.deepEqual(readdirSync(join(skillRoot, "references")).sort(), [
     "build.md", "planning.md", "shared.md",
   ]);
+});
+
+test("normative routing assigns every operation to one exclusive mode", () => {
+  const table = entry.match(/\| Request \| Mode \| Allowed effect \| Read \|([\s\S]*?)\n\nFor any GitHub operation/);
+  assert.ok(table, "entry point contains the normative routing matrix");
+  const routes = table[1].split("\n").filter((line) => line.startsWith("| ") && !line.includes("---"))
+    .map((line) => line.split("|").map((cell) => cell.trim()).slice(1, 5));
+  assert.ok(routes.length >= 16);
+  assert.equal(new Set(routes.map(([request]) => request)).size, routes.length,
+    "each operation has one row and therefore one owner");
+  for (const [request, mode, effect, reference] of routes) {
+    assert.ok(["Plan", "Build"].includes(mode), `unknown owner for ${request}`);
+    assert.ok(effect.length > 0, `missing allowed effect for ${request}`);
+    assert.equal(reference, `\`references/${mode.toLowerCase() === "plan" ? "planning" : "build"}.md\``);
+  }
+  const owner = (name) => routes.find(([request]) => request.split(/[ /,(]/).includes(name))?.[1];
+  for (const [operation, mode] of [["status", "Plan"], ["doctor", "Plan"],
+    ["impact", "Plan"], ["handoff", "Plan"], ["log", "Plan"], ["retro", "Plan"],
+    ["skip", "Plan"], ["reopen", "Plan"], ["build", "Build"], ["review", "Build"],
+    ["verify", "Build"], ["next", "Build"], ["commit", "Build"], ["publish", "Build"]]) {
+    assert.equal(owner(operation), mode, `${operation} belongs to ${mode}`);
+  }
+  assert.match(plan, /These are Plan operations/);
+  for (const operation of ["status", "log", "handoff", "impact", "doctor", "start", "skip", "reopen", "retro"]) {
+    assert.match(build, new RegExp(`Build does not own[\\s\\S]*${operation}`));
+  }
+  assert.match(build, /code review/);
+  assert.match(build, /implementation verification/);
+  assert.match(readme, /Plan owns[\s\S]*Build owns[\s\S]*`@gt next`/);
+  assert.match(readme, /`@gt status` and `@gt doctor` are distinct/);
+  assert.match(guide, /both Plan/);
+  assert.match(guide, /both Build/);
+  assert.match(guide, /there is no agent switching/);
 });
 
 test("plan reference retains grounded stages, safe dependencies, and controlled comment edits", () => {
@@ -80,7 +113,7 @@ test("skill and docs clarify explicit targets and narrow checkbox authorization"
 
 test("README and guide describe the skill as the sole interface", () => {
   for (const text of [readme, guide]) {
-    assert.match(text, /two modes: \*\*plan\*\* and \*\*build\*\*/);
+    assert.match(text, /two modes: \*\*plan\*\* and \*\*build\*\*/i);
   }
   assert.match(readme, /a commit never implies publish/i);
   assert.match(guide, /former `\/gt` command, `\/cp` command/);

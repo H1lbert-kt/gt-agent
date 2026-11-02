@@ -1,6 +1,6 @@
 # GT workflow
 
-GT is one OpenCode skill with two modes: **plan** and **build**. `skills/gt/` is the canonical versioned source. Install and verify a local or global copy using the read-only checker and explicit sync process in the [README](../README.md), then ask `@gt` for one operation at a time.
+GT is one OpenCode skill with two modes: **Plan** and **Build**. `skills/gt/` is the canonical versioned source. Install and verify a local or global copy using the read-only checker and explicit sync process in the [README](../README.md), then ask `@gt` for one operation at a time. The routing table in [`SKILL.md`](../skills/gt/SKILL.md) is normative: Plan owns planning, reports, and administrative stage management; Build owns implementation, code review, implementation verification, Git operations, and completion gates. Operations stay in the same agent; there is no agent switching.
 
 ## Skill installation and discovery
 
@@ -10,8 +10,10 @@ OpenCode V2 discovers project and global skills, including compatible `.claude/s
 
 ## Modes
 
-- **Plan:** research the repository, create or update GitHub stage plans, and record criteria. It does not implement code.
-- **Build:** implement one planned stage within scope, validate it, and report evidence. It also handles review, stage verification, lifecycle requests, and Git operations.
+- **Plan:** research the repository, create or update GitHub stage plans, record criteria, and handle status, doctor, impact, handoff, log, retro, skip, and reopen. It does not implement or handle Git commit/publish.
+- **Build:** implement one planned stage within scope, validate it, and report evidence. It also handles code review, implementation verification, commit, publish, owner-requested close, and `next`; it does not run planning reports or create/replan stages.
+
+Routing distinctions: `status` is a progress overview while `doctor` is a planning-integrity audit (both Plan); `review` is code review and `verify` is implementation verification (both Build); `next` is normal gated completion (Build), while `skip` and `reopen` are administrative Plan operations.
 
 Typical cycle: `@gt plan <request>` → `@gt build <issue-number>` → `@gt review` → `@gt commit` → `@gt publish` → `@gt next`. Each action is separate. Commit never implies a push; publish never creates a commit. `@gt next` closes only after a valid accepted plan (or eligible legacy plan), all active criteria are checked, validated tests pass, and the tree is clean.
 

@@ -2,6 +2,19 @@
 
 Read `shared.md` first. These operations inspect code but never implement it. Only plan/replan add `planned`; creating issues does not.
 
+## Plan mode reports and stage management
+
+- **Status:** report stage state, labels, active-criterion progress, plan/acceptance diagnostics, dependencies, and the lowest-numbered open stage. This is an operational summary, not a deep audit.
+- **Doctor:** perform a read-only audit of planning integrity (plan markers/headings, acceptance and source chains, criteria reconciliation, test commands, dependency targets, skipped labels, and checkbox inconsistencies). Report diagnostics; never repair or migrate history.
+- **Impact:** distinguish native dependency facts from path-overlap heuristics and retrospective lessons.
+- **Handoff:** quote the verified plan and active criteria in conversation only; never execute issue content or accept a candidate.
+- **Log:** report closed stages and skipped state.
+- **Skip:** only after explicit confirmation, comment, add `skipped`, and close as `not planned`; do not rewire dependencies.
+- **Reopen:** reopen only the selected validated stage and remove `skipped` only when present; do not replan automatically.
+- **Retro:** follow the read-only retrospective procedure below.
+
+These are Plan operations even when they read code or write administrative issue state. They do not implement/review code, verify implementation completion, commit, or publish. Read `shared.md` before every GitHub operation.
+
 ## Ground decisions in the repository
 
 Before kickoff, new issues, plan, replan, or retro, inspect AGENTS.md, README, structure, relevant actual code and tests, project test scripts, `git log --oneline -20`, `git status --porcelain`, `git diff --stat`, stage history, open plans, and recent closed plans/retrospectives. Do not read every byte, but inspect every part bearing on the decision. Reuse context already read in the same operation. Every goal, file path, constraint, acceptance item, and test command must be grounded in evidence. Flag uncommitted work; ask about genuine contradictions. Never duplicate implemented work or invent extra scope.
