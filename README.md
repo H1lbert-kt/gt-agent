@@ -4,12 +4,28 @@ GT is an OpenCode skill for planning work as GitHub stages and building those st
 
 ## Install
 
+`skills/gt/` in this repository is the canonical, versioned source. The native OpenCode project and global skill paths are `.opencode/skills/gt/` and `~/.config/opencode/skills/gt/`. The helper below compares every file in the bundle (including hidden files) and prints a content digest; it never prints file contents.
+
+For a project-local copy, run from the repository root:
+
 ```sh
-mkdir -p ~/.config/opencode/skills
-cp -r skills/gt ~/.config/opencode/skills/gt
+node scripts/gt-skill.mjs manifest
+node scripts/gt-skill.mjs sync .opencode/skills/gt --apply
+node scripts/gt-skill.mjs check .opencode/skills/gt
 ```
 
-For a project-only install, copy to `.opencode/skills/gt/`. Requirements: OpenCode with skill support, Git, and authenticated `gh` for GitHub workflows. Run the structural tests with `node --test tests/` (Node.js).
+For a global copy, explicitly authorize the external destination:
+
+```sh
+node scripts/gt-skill.mjs sync ~/.config/opencode/skills/gt --apply --confirm-external
+node scripts/gt-skill.mjs check ~/.config/opencode/skills/gt
+```
+
+`check` is read-only and reports `equal`, `absent`, or `divergent`, with changed/missing/extra relative paths. A non-equal check exits nonzero. To update, inspect the report first, then run `sync <same-target> --apply`; an existing divergent copy is refused unless `--replace` is also supplied. Replacement moves the old copy to a timestamped `.gt-backups/` directory before installing the source. External destinations always require `--confirm-external`; no command changes user configuration or installs globally by default. Use `node scripts/gt-skill.mjs --help` for command syntax.
+
+OpenCode discovers skills from project/global and compatibility directories; project-local definitions are discovered while walking up to the Git worktree. Skill names must be unique across locations. Avoid duplicate `gt` definitions rather than relying on undocumented precedence. Confirm discovery in the current session's available skills list and load the `gt` skill with the native skill tool; skills load on demand, so a restart is not normally part of installation. The official [Agent Skills documentation](https://opencode.ai/docs/skills/) lists discovery locations and name rules.
+
+Requirements: OpenCode V2 with skill support, Node.js 20 or newer for the bundle utility and tests, Git, and authenticated `gh` for GitHub workflows. Run the offline suite with `node --test tests/`.
 
 ## Use
 

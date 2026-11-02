@@ -1,5 +1,5 @@
 ---
-name: GT
+name: gt
 description: Plan project work as GitHub stages and build planned stages, including explicitly authorized review, commit, and publish workflows.
 ---
 

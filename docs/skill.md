@@ -1,6 +1,12 @@
 # GT workflow
 
-GT is one OpenCode skill with two modes: **plan** and **build**. Install `skills/gt/` as described in the [README](../README.md), then ask `@gt` for one operation at a time.
+GT is one OpenCode skill with two modes: **plan** and **build**. `skills/gt/` is the canonical versioned source. Install and verify a local or global copy using the read-only checker and explicit sync process in the [README](../README.md), then ask `@gt` for one operation at a time.
+
+## Skill installation and discovery
+
+The bundle helper `scripts/gt-skill.mjs` reports a deterministic SHA-256 identity over all files in `skills/gt/`; `node scripts/gt-skill.mjs check <path>` reports whether a destination is equal, absent, or divergent without changing it. Use `node scripts/gt-skill.mjs sync <path> --apply` only after reviewing the destination; divergent content requires `--replace` and is preserved in `.gt-backups/`. Destinations outside the repository additionally require `--confirm-external`. These commands do not update OpenCode configuration.
+
+OpenCode V2 discovers project and global skills, including compatible `.claude/skills/` and `.agents/skills/` locations. Names must be unique across locations; the docs do not define precedence for duplicate skill names, so remove or rename duplicates instead of assuming which definition wins. Confirm that `gt` appears in the current session's available skills and load it using the native skill tool. Skills load on demand; do not restart solely because a copy was installed. See the [official Agent Skills documentation](https://opencode.ai/docs/skills/) for current discovery and frontmatter rules.
 
 ## Modes
 
@@ -24,7 +30,7 @@ Typical cycle: `@gt plan <request>` → `@gt build <issue-number>` → `@gt revi
 
 ## Validation
 
-Run `node --test tests/`. These structural checks do not exercise live GitHub or model behavior. See [`skills/gt/SKILL.md`](../skills/gt/SKILL.md) for routing and [`skills/gt/references/`](../skills/gt/references/) for operational rules.
+Run `node --test tests/` with Node.js 20 or newer. These offline structural and bundle-helper tests do not exercise live GitHub or model behavior. See [`skills/gt/SKILL.md`](../skills/gt/SKILL.md) for routing and [`skills/gt/references/`](../skills/gt/references/) for operational rules.
 
 ### Deterministic contract helper
 

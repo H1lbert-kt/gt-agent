@@ -14,7 +14,7 @@ const readme = readFileSync(join(root, "README.md"), "utf8");
 const guide = readFileSync(join(root, "docs", "skill.md"), "utf8");
 
 test("skill exposes only plan and build modes without a primary-agent setup", () => {
-  assert.match(entry, /^---\nname: GT\ndescription: .+\n---\n/);
+  assert.match(entry, /^---\nname: gt\ndescription: .+\n---\n/);
   assert.match(entry, /two modes: \*\*plan\*\* and \*\*build\*\*/);
   assert.doesNotMatch(entry, /agent:|permission:|\$ARGUMENTS|primary agent/);
   assert.match(entry, /Do not run the retired `\/gt` or `\/cp` commands/);
@@ -84,11 +84,24 @@ test("README and guide describe the skill as the sole interface", () => {
   }
   assert.match(readme, /a commit never implies publish/i);
   assert.match(guide, /former `\/gt` command, `\/cp` command/);
-  assert.match(readme, /cp -r skills\/gt/);
+  assert.match(readme, /node scripts\/gt-skill\.mjs sync \.opencode\/skills\/gt --apply/);
   assert.match(guide, /node --test tests\//);
   assert.match(readme, /plan-contract\.mjs/);
   assert.match(guide, /agent-evaluation-only/);
   assert.match(guide, /no GitHub, network, filesystem, or shell side effects/);
+});
+
+test("bundle installation docs define read-only checks, explicit external sync, and unique skill IDs", () => {
+  for (const text of [readme, guide]) {
+    assert.match(text, /canonical, versioned source|canonical versioned source/i);
+    assert.match(text, /gt-skill\.mjs/);
+    assert.match(text, /\.gt-backups/);
+    assert.match(text, /unique/i);
+    assert.match(text, /skills documentation|Agent Skills documentation/i);
+  }
+  assert.match(readme, /--confirm-external/);
+  assert.match(readme, /`check` is read-only/);
+  assert.match(guide, /Node\.js 20 or newer/);
 });
 
 test("retired command, agent, and historical documentation artifacts are absent", () => {
