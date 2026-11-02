@@ -19,9 +19,9 @@ Before kickoff, new issues, plan, replan, or retro, inspect AGENTS.md, README, s
 
 ## Plan N / plan all / replan N
 
-Plan N requires an open `stage` issue without `planned`; otherwise suggest replan. Plan all selects only open unplanned stages, sorted by issue number. Replan requires an open stage; if the tree is dirty, list files and ask `Replanjar mesmo assim? responda sim para confirmar.` before writes. Ask briefly what changed unless the request already explains it.
+Plan N requires the explicitly numbered open `stage` issue without `planned`; an invalid explicit target stops without fallback. Plan all selects only open unplanned stages, sorted by issue number. Replan requires the explicitly numbered open stage; if the tree is dirty, list files and ask `Replanjar mesmo assim? responda sim para confirmar.` before writes. Ask briefly what changed unless the request already explains it.
 
-Dry-run must still perform repository analysis and read the selected issues, but prints the proposed plans without writes. Otherwise append each plan as a NEW comment using `gh issue comment <N> --body-file -`. Never rewrite descriptions or prior comments.
+Dry-run must still perform repository analysis and read the selected issues, but prints the proposed plans without writes. Otherwise append each plan as a NEW comment using `gh issue comment <N> --body-file -`. Never rewrite descriptions. Prior comments are append-only by default; an explicit request to overwrite a specific comment authorizes replacing that comment. Verify the target comment and replacement content before updating it, and never overwrite other comments. Without that explicit request, append a new comment.
 
 Use this exact template and heading order:
 
@@ -45,7 +45,7 @@ Test command: <validated existing project command>
 Build mode: read this plan before touching code; check off EVERY task item in this issue (original description and all comments) as it is implemented. Never close this issue automatically — request @gt next to verify and close it.
 ```
 
-Re-read the posted comment and check marker, required headings/order, non-empty test command and footer before adding `planned` via `gh issue edit <N> --add-label planned`. On failure append a corrected comment, at most two attempts. Report failure without changing labels if validation still fails. Previous plans/labels survive a failed replan. Stop with a summary; implementation is outside this skill.
+Re-read the posted or specifically authorized updated comment and check marker, required headings/order, non-empty test command and footer before adding `planned` via `gh issue edit <N> --add-label planned`. On failure append a corrected comment, at most two attempts, unless the user explicitly authorized overwriting that specific comment. Report failure without changing labels if validation still fails. Previous plans/labels survive a failed replan. This planning exception does not permit changing checkbox status; only an authorized build may perform the minimal checkbox updates defined in `shared.md`. Stop with a summary; implementation is outside this skill.
 
 ## Retro N
 

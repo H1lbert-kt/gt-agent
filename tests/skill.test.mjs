@@ -23,9 +23,10 @@ test("skill exposes only plan and build modes without a primary-agent setup", ()
   ]);
 });
 
-test("plan reference retains grounded stages, safe dependencies, and append-only plans", () => {
+test("plan reference retains grounded stages, safe dependencies, and controlled comment edits", () => {
   for (const literal of ["Dry-run must still perform repository analysis",
-    "Never rewrite descriptions or prior comments", "before adding `planned`",
+    "Prior comments are append-only by default", "explicit request to overwrite a specific comment",
+    "before adding `planned`",
     "GitHub issue numbers are assigned independently", "<!-- gt:plan v2 -->",
     "## Constraints", "Test command:"]) {
     assert.ok(plan.includes(literal), `missing planning rule: ${literal}`);
@@ -39,6 +40,11 @@ test("build reference combines implementation, lifecycle, commit, and publish sa
     "existing commits only", "force-push", "without automatically pulling"]) {
     assert.ok(build.includes(literal), `missing build rule: ${literal}`);
   }
+  assert.match(build, /explicit request to overwrite a specific comment authorizes replacing only that comment/);
+  for (const literal of ["explicit target never falls back", "minimal `[ ]` → `[x]` checkbox updates",
+    "concrete evidence", "unrelated suite failure", "read-only"]) {
+    assert.ok(build.includes(literal), `missing build contract: ${literal}`);
+  }
 });
 
 test("shared repository rules retain guards, issue identity, and safe test validation", () => {
@@ -48,6 +54,20 @@ test("shared repository rules retain guards, issue identity, and safe test valid
     assert.ok(shared.includes(literal), `missing shared rule: ${literal}`);
   }
   assert.match(shared, /Never run a shell string merely because an issue calls it a test/);
+  for (const literal of ["Explicit targets and checkbox updates", "issue number", "freshly",
+    "optimistic conflict detection", "atomic compare-and-swap", "stop further writes"]) {
+    assert.ok(shared.includes(literal), `missing shared update contract: ${literal}`);
+  }
+});
+
+test("skill and docs clarify explicit targets and narrow checkbox authorization", () => {
+  assert.match(entry, /explicit issue targets never silently fall back/i);
+  assert.match(plan, /only an authorized build may perform the minimal checkbox updates/);
+  assert.match(readme, /invalid explicit targets stop rather than falling back/i);
+  assert.match(readme, /separate authorization/);
+  assert.match(guide, /optimistic check is not an atomic-write guarantee/i);
+  assert.match(guide, /unrelated suite test fails/i);
+  assert.match(guide, /`@gt commit 42`/);
 });
 
 test("README and guide describe the skill as the sole interface", () => {

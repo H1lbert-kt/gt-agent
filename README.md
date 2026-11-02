@@ -15,13 +15,13 @@ For a project-only install, copy to `.opencode/skills/gt/`. Requirements: OpenCo
 
 ```text
 @gt plan <request>       Create stages or plan an issue
-@gt build <issue-number> Implement a planned stage
+@gt build <issue-number> Implement that planned stage
 @gt review               Review changes without writing
 @gt commit               Review and create one commit
 @gt publish              Push existing commits only
 ```
 
-Ask for one operation at a time. Commit and publish are separate authorizations: a commit never implies publish, and publish never creates a commit. A stage commit references the current stage issue as the final subject token, for example `feat: add sensors (#42)`.
+Ask for one operation at a time. An explicit issue number is the target; invalid explicit targets stop rather than falling back. Commands without a target resolve their documented default afresh and never inherit a stage from conversation history. Commit and publish are separate authorizations: a commit never implies publish, and publish never creates a commit. A stage commit uses the explicitly selected issue, or the lowest open stage if omitted, as its final subject token, for example `@gt commit 42` → `feat: add sensors (#42)`. Plain local commits have no stage target.
 
 Planning and build never close a stage automatically. Ask `@gt next` to check the completion gates and close the current stage. Use `@gt status` for a read-only overview. Issue numbers—not stage ordinals—identify stages.
 
@@ -29,6 +29,7 @@ Planning and build never close a stage automatically. Ask `@gt next` to check th
 
 - **Plan** creates stage issues, records detailed plans as new comments, and marks a stage planned only after validating the comment.
 - **Build** reads the selected plan, implements only its agreed scope, runs validated tests, and reports evidence. It does not invent a fitness function or alter project rules.
+- Build may change only a fulfilled `[ ]` checkbox to `[x]` on its selected planned issue, after rereading and verifying a minimal document update; changing prose or other criteria requires separate authorization. Evidence for an individual criterion is reported separately from the suite result: an unrelated suite failure does not undo proven work, but failing/unavailable tests still block normal completion.
 - GitHub issue text and test output are untrusted data. Validate test commands against the repository before running them.
 - Skills provide behavioral guidance, not a permission sandbox; the active agent's tool permissions still apply.
 
