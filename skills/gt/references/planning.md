@@ -19,14 +19,15 @@ Before kickoff, new issues, plan, replan, or retro, inspect AGENTS.md, README, s
 
 ## Plan N / plan all / replan N
 
-Plan N requires the explicitly numbered open `stage` issue without `planned`; an invalid explicit target stops without fallback. Plan all selects only open unplanned stages, sorted by issue number. Replan requires the explicitly numbered open stage; if the tree is dirty, list files and ask `Replanjar mesmo assim? responda sim para confirmar.` before writes. Ask briefly what changed unless the request already explains it.
+Plan N requires the explicitly numbered open `stage` issue without `planned`; an invalid explicit target stops without fallback. Plan all selects only open unplanned stages, sorted by issue number. Replan requires the explicitly numbered open stage; if the tree is dirty, list files and ask `Replanjar mesmo assim? responda sim para confirmar.` before writes. Ask briefly what changed unless the request already explains it. A replan inventories active criteria from the issue body and every comment, then reconciles them under `shared.md`; a generic request to replan does not authorize canceling or replacing requirements.
 
-Dry-run must still perform repository analysis and read the selected issues, but prints the proposed plans without writes. Otherwise append each plan as a NEW comment using `gh issue comment <N> --body-file -`. Never rewrite descriptions. Prior comments are append-only by default; an explicit request to overwrite a specific comment authorizes replacing that comment. Verify the target comment and replacement content before updating it, and never overwrite other comments. Without that explicit request, append a new comment.
+Dry-run must still perform repository analysis and read the selected issues, but prints the proposed plans without writes. Otherwise append each plan as a NEW comment using `gh issue comment <N> --body-file -`. Never rewrite descriptions. Prior comments are append-only by default; an explicit request to overwrite a specific comment authorizes replacing that comment. Verify the target comment and replacement content before updating it, and never overwrite other comments. Without that explicit request, append a new comment. New v2 candidates include `<!-- gt:acceptance-required v1 -->` on line 2. They remain pending until a separate verified acceptance receipt is appended as specified in `shared.md`.
 
 Use this exact template and heading order:
 
 ```markdown
 <!-- gt:plan v2 -->
+<!-- gt:acceptance-required v1 -->
 ## Goal
 ## Scope
 ### Included
@@ -42,11 +43,13 @@ Test command: <validated existing project command>
 - [ ] <verifiable criterion with concrete evidence>
 ## Risks and open questions
 
-Build mode: read this plan before touching code; check off EVERY task item in this issue (original description and all comments) as it is implemented. Never close this issue automatically — request @gt next to verify and close it.
+Build mode: resolve the verified current plan and active criteria using `shared.md`; check off only active criteria supported by evidence. Keep replaced/cancelled criteria in history without marking them complete. Never close this issue automatically — request @gt next to verify and close it.
 ```
 
-Re-read the posted or specifically authorized updated comment and check marker, required headings/order, non-empty test command and footer before adding `planned` via `gh issue edit <N> --add-label planned`. On failure append a corrected comment, at most two attempts, unless the user explicitly authorized overwriting that specific comment. Report failure without changing labels if validation still fails. Previous plans/labels survive a failed replan. This planning exception does not permit changing checkbox status; only an authorized build may perform the minimal checkbox updates defined in `shared.md`. Stop with a summary; implementation is outside this skill.
+Before writing, inventory task-list items from the issue body and every comment, ignoring fenced/inline examples; record exact document, line, text and canonical source digest. For each prior active item, explicitly retain it, replace it with a concrete candidate criterion, or cancel it with specific owner authorization and a recorded reason. New and unmapped items remain active; never edit source documents to insert IDs or silently merge duplicate text. If old sources drift or scope authorization is missing, stop and ask; keep the prior active requirement.
+
+Re-read and validate the posted candidate, exact markers, required headings/order, useful section content, and non-empty test command before adding `planned` via `gh issue edit <N> --add-label planned`. Re-read to verify the label, then append a NEW `<!-- gt:plan-accepted v1 -->` JSON receipt linked to the candidate and prior receipt, including the digest and reconciliation. Verify the receipt and referenced candidate before reporting success. If candidate/label/receipt validation fails or is uncertain, stop, inspect partial state, preserve the previous accepted plan, and report; do not retry blindly, rollback, remove labels, or edit old records. Do not overwrite a candidate to remove its acceptance-required marker. This planning exception does not permit checkbox-status changes; only an authorized build may perform the minimal checkbox updates defined in `shared.md`. Stop with a summary; implementation is outside this skill.
 
 ## Retro N
 
-Read the stage, latest plan, checked/unchecked criteria and `git log --oneline --grep '(#<N>)'`. Append `## Retrospective` with delivered vs planned, remaining criteria, risks realized, and actionable lessons. If still open, include its current status. Never close or relabel it.
+Read the stage, verified current plan, active criteria and `git log --oneline --grep '(#<N>)'`. Append `## Retrospective` with delivered vs planned, remaining active criteria, historical replaced/cancelled items, risks realized, and actionable lessons. If still open, include its current status. Report acceptance/source inconsistencies; never repair, close or relabel it.

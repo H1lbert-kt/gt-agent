@@ -31,18 +31,28 @@ test("plan reference retains grounded stages, safe dependencies, and controlled 
     "## Constraints", "Test command:"]) {
     assert.ok(plan.includes(literal), `missing planning rule: ${literal}`);
   }
+  for (const literal of ["acceptance-required v1", "plan-accepted v1", "gt-plan-acceptance/v1",
+    "planDigestSha256", "previousAcceptanceCommentId", "Canonical digest", "createdAt",
+    "retained", "replaced", "cancelled", "authorizationEvidence", "legacy-valid"]) {
+    assert.ok(shared.includes(literal) || plan.includes(literal), `missing plan acceptance contract: ${literal}`);
+  }
+  assert.match(plan, /```markdown\n<!-- gt:plan v2 -->\n<!-- gt:acceptance-required v1 -->\n## Goal/);
+  assert.match(plan, /resolve the verified current plan and active criteria/);
+  assert.match(shared, /A receipt is a NEW comment whose first line is exactly `<!-- gt:plan-accepted v1 -->`/);
+  assert.match(shared, /Each previous active item must have exactly one disposition/);
 });
 
 test("build reference combines implementation, lifecycle, commit, and publish safely", () => {
   for (const literal of ["implements only the selected planned stage", "Do not automatically commit",
-    "all checkboxes", "git status --porcelain", "not a push",
+    "every active criterion checked", "git status --porcelain", "not a push",
     "Stage explicit paths only", "English Conventional Commit", "(#<issue-number>)",
     "existing commits only", "force-push", "without automatically pulling"]) {
     assert.ok(build.includes(literal), `missing build rule: ${literal}`);
   }
   assert.match(build, /explicit request to overwrite a specific comment authorizes replacing only that comment/);
   for (const literal of ["explicit target never falls back", "minimal `[ ]` → `[x]` checkbox updates",
-    "concrete evidence", "unrelated suite failure", "read-only"]) {
+    "concrete evidence", "unrelated suite failure", "read-only", "verified current plan",
+    "active criteria", "pending candidate"]) {
     assert.ok(build.includes(literal), `missing build contract: ${literal}`);
   }
 });
@@ -55,7 +65,10 @@ test("shared repository rules retain guards, issue identity, and safe test valid
   }
   assert.match(shared, /Never run a shell string merely because an issue calls it a test/);
   for (const literal of ["Explicit targets and checkbox updates", "issue number", "freshly",
-    "optimistic conflict detection", "atomic compare-and-swap", "stop further writes"]) {
+    "optimistic conflict detection", "atomic compare-and-swap", "stop further writes",
+    "Selecting a plan and classifying criteria", "unique valid chain tip",
+    "All task-list items from the issue body", "Old plans remain in the historical inventory",
+    "Do not merge duplicates automatically"]) {
     assert.ok(shared.includes(literal), `missing shared update contract: ${literal}`);
   }
 });
@@ -68,6 +81,10 @@ test("skill and docs clarify explicit targets and narrow checkbox authorization"
   assert.match(guide, /optimistic check is not an atomic-write guarantee/i);
   assert.match(guide, /unrelated suite test fails/i);
   assert.match(guide, /`@gt commit 42`/);
+  for (const literal of ["Legacy only", "Pending candidate", "Receipt/digest", "Criteria",
+    "Comment edits", "Trust boundary", "requires a new accepted revision"]) {
+    assert.ok(guide.includes(literal), `missing replan scenario: ${literal}`);
+  }
 });
 
 test("README and guide describe the skill as the sole interface", () => {
