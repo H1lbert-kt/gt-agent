@@ -1,12 +1,18 @@
 # Shared repository rules
 
+## Freshness
+
+Reuse instructions, not stale state. Preserve required guards, target
+resolution, fresh snapshots, pre-write rereads, and post-write verification.
+Prior authorization and test results do not carry forward.
+
 ## Repository guard
 
 Before any `gh` call, run `git remote get-url origin`. Stop if it fails or is not a GitHub remote. Normalize HTTPS or SSH URLs to `owner/repo` by removing the host and trailing `.git`. If the user supplied a repository, normalize and compare it; stop on mismatch. Run all `gh` commands from this repository without `-R`. Check `gh auth status` before writes. Never change remotes or authentication automatically.
 
 ## Stage identity and history
 
-Current stage = lowest-numbered open issue with label `stage`, not the stage ordinal in a title. List via `gh issue list --label stage --state open --json number,title,labels --limit 100`, sort numerically. No open issue means no current stage. Use `--state all --limit 200` for history. If results reach a limit, paginate before making completeness, duplicate, or current-stage decisions; report if completeness cannot be established.
+Current stage = lowest-numbered open issue with label `stage`, not the stage ordinal in a title. List via `gh issue list --label stage --state open --json number,title,labels,state --limit 100`, sort numerically; include `state` because the deterministic target resolver validates it. No open issue means no current stage. Use `--state all --limit 200` for history. If results reach a limit, paginate before making completeness, duplicate, or current-stage decisions; report if completeness cannot be established.
 
 Before changing a specific issue, verify its `stage` label. Native dependencies are read using `gh issue view <N> --json blockedBy,blocking`. Link only genuine dependencies with `gh api graphql` and `addBlockedBy(input: {issueId: "<blocked node-id>", blockingIssueId: "<blocking node-id>"})`; obtain IDs via `gh issue view <N> --json id`, then verify edges. Never put a `Blocked by #N` substitute in a body. No GraphQL mutations other than `addBlockedBy`/`removeBlockedBy` are authorized by the stage workflow.
 

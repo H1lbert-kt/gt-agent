@@ -26,7 +26,7 @@ test("skill exposes only plan and build modes without a primary-agent setup", ()
 });
 
 test("normative routing assigns every operation to one exclusive mode", () => {
-  const table = entry.match(/\| Request \| Mode \| Allowed effect \| Read \|([\s\S]*?)\n\nFor any GitHub operation/);
+  const table = entry.match(/\| Request \| Mode \| Allowed effect \| Read \|([\s\S]*?)\n\nFor GitHub operations/);
   assert.ok(table, "entry point contains the normative routing matrix");
   const routes = table[1].split("\n").filter((line) => line.startsWith("| ") && !line.includes("---"))
     .map((line) => line.split("|").map((cell) => cell.trim()).slice(1, 5));
@@ -36,7 +36,8 @@ test("normative routing assigns every operation to one exclusive mode", () => {
   for (const [request, mode, effect, reference] of routes) {
     assert.ok(["Plan", "Build"].includes(mode), `unknown owner for ${request}`);
     assert.ok(effect.length > 0, `missing allowed effect for ${request}`);
-    assert.equal(reference, `\`references/${mode.toLowerCase() === "plan" ? "planning" : "build"}.md\``);
+    if (request.startsWith("doctor")) assert.match(reference, /references\/planning\.md.*references\/build\.md/);
+    else assert.equal(reference, `\`references/${mode.toLowerCase() === "plan" ? "planning" : "build"}.md\``);
   }
   const owner = (name) => routes.find(([request]) => request.split(/[ /,(]/).includes(name))?.[1];
   for (const [operation, mode] of [["status", "Plan"], ["doctor", "Plan"],
@@ -56,6 +57,12 @@ test("normative routing assigns every operation to one exclusive mode", () => {
   assert.match(guide, /both Plan/);
   assert.match(guide, /both Build/);
   assert.match(guide, /there is no agent switching/);
+  assert.match(entry, /repeating `@gt` is optional/);
+  assert.match(readme, /each step is a separate request/);
+  assert.match(shared, /Reuse instructions, not stale state/);
+  assert.match(entry, /Interpret the user's natural-language request and current conversation/);
+  assert.match(entry, /A discussion, draft, or review of a plan is not/);
+  assert.match(entry, /not OpenCode agent-selection commands/);
 });
 
 test("plan reference retains grounded stages, safe dependencies, and controlled comment edits", () => {
@@ -64,6 +71,8 @@ test("plan reference retains grounded stages, safe dependencies, and controlled 
   assert.match(plan, /```markdown\n<!-- gt:plan v2 -->\n<!-- gt:acceptance-required v1 -->\n## Goal/);
   assert.match(plan, /resolve the verified current plan and active criteria/);
   assert.match(plan, /append a NEW `<!-- gt:plan-accepted v1 -->` JSON receipt/);
+  assert.match(plan, /Discussion\/drafting\/review alone is read-only/);
+  assert.match(plan, /Kickoff is a read-only survey\/proposal/);
   assert.match(shared, /lib\/plan-contract\.mjs/);
   assert.match(shared, /authorizationEvidence/);
 });
@@ -85,6 +94,7 @@ test("build reference combines implementation, lifecycle, commit, and publish sa
 
 test("doctor catalog is stable, evidence-based, and covered by inert read-only cases", () => {
   assert.match(build, /^## Doctor catalog \(Plan-owned, read-only\)$/m);
+  assert.match(plan, /stable diagnostic-code catalog in `build\.md`/);
   const codes = [...build.matchAll(/`(GT-DOC-[A-Z-]+)`/g)].map((match) => match[1]);
   assert.equal(new Set(codes).size, codes.length, "catalog codes are unique");
   assert.ok(codes.length >= 10);
@@ -175,12 +185,16 @@ test("bundle installation docs define read-only checks, explicit external sync, 
     assert.match(text, /canonical, versioned source|canonical versioned source/i);
     assert.match(text, /gt-skill\.mjs/);
     assert.match(text, /\.gt-backups/);
-    assert.match(text, /unique/i);
+    assert.match(text, /unique|duplicate/i);
     assert.match(text, /skills documentation|Agent Skills documentation/i);
   }
   assert.match(readme, /--confirm-external/);
   assert.match(readme, /`check` is read-only/);
   assert.match(guide, /Node\.js 22 or newer/);
+  for (const text of [readme, guide]) {
+    assert.match(text, /opencode\.ai\/v2\/docs\/skills/);
+    assert.doesNotMatch(text, /opencode\.ai\/docs\/skills/);
+  }
 });
 
 test("retired command, agent, and historical documentation artifacts are absent", () => {

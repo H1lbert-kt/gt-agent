@@ -6,16 +6,16 @@ GT is one OpenCode skill with two modes: **Plan** and **Build**. `skills/gt/` is
 
 The bundle helper `scripts/gt-skill.mjs` reports a deterministic SHA-256 identity over all files in `skills/gt/`; `node scripts/gt-skill.mjs check <path>` reports whether a destination is equal, absent, or divergent without changing it. Use `node scripts/gt-skill.mjs sync <path> --apply` only after reviewing the destination; divergent content requires `--replace` and is preserved in `.gt-backups/`. Destinations outside the repository additionally require `--confirm-external`. These commands do not update OpenCode configuration.
 
-OpenCode V2 discovers project and global skills, including compatible `.claude/skills/` and `.agents/skills/` locations. Names must be unique across locations; the docs do not define precedence for duplicate skill names, so remove or rename duplicates instead of assuming which definition wins. Confirm that `gt` appears in the current session's available skills and load it using the native skill tool. Skills load on demand; do not restart solely because a copy was installed. See the [official Agent Skills documentation](https://opencode.ai/docs/skills/) for current discovery and frontmatter rules.
+OpenCode V2 discovers project and global skills, including compatible `.claude/skills/` and `.agents/skills/` locations. Later registered definitions override earlier ones; avoid duplicate IDs unless deliberately overriding. Confirm that `gt` appears in the current session's available skills and load it using the native skill tool. Skills load on demand; do not restart solely because a copy was installed. See the [V2 Agent Skills documentation](https://opencode.ai/v2/docs/skills) for current discovery and frontmatter rules.
 
 ## Modes
 
-- **Plan:** research the repository, create or update GitHub stage plans, record criteria, and handle status, doctor, impact, handoff, log, retro, skip, and reopen. It does not implement or handle Git commit/publish.
+- **Plan:** infer the intended operation from natural language and context; research the repository, create or update GitHub stage plans when explicitly requested, record criteria, and handle status, doctor, impact, handoff, log, retro, skip, and reopen. No special command syntax is required. Discussing/reviewing a plan does not itself authorize publishing it. It does not implement or handle Git commit/publish.
 - **Build:** implement one planned stage within scope, validate it, and report evidence. It also handles code review, implementation verification, commit, publish, owner-requested close, and `next`; it does not run planning reports or create/replan stages.
 
 Routing distinctions: `status` is a progress overview while `doctor` is a planning-integrity audit (both Plan); `review` is code review and `verify` is implementation verification (both Build); `next` is normal gated completion (Build), while `skip` and `reopen` are administrative Plan operations.
 
-Typical cycle: `@gt plan <request>` → `@gt build <issue-number>` → `@gt review` → `@gt commit` → `@gt publish` → `@gt next`. Each action is separate. Commit never implies a push; publish never creates a commit. `@gt next` closes only after a valid accepted plan (or eligible legacy plan), all active criteria are checked, validated tests pass, and the tree is clean.
+For related requests, repeating `@gt` is optional. Each operation still requires its own authorization; targets follow their resolution rules. Example: `@gt plan 42` → `build 42` → `review` → `commit 42` → `publish` → `next`; each step is a separate request. Commit never implies a push; publish never creates a commit. `next` closes only after a valid accepted plan (or eligible legacy plan), all active criteria are checked, validated tests pass, and the tree is clean.
 
 ## Safety
 
@@ -28,6 +28,7 @@ Typical cycle: `@gt plan <request>` → `@gt build <issue-number>` → `@gt revi
 - Replanning inventories task-list criteria in the issue body and every comment. Unchanged/unmapped requirements stay active; replacements need specific authorization and a concrete successor, cancellations need explicit owner authorization and a reason. Old criteria remain visible, but accepted replacements/cancellations are historical—not completed—and successors start unchecked without inherited evidence.
 - The accepted plan digest detects text/structure edits but normalizes only checkbox state on real task-list lines outside code fences. It is not a signature. Editing an old comment does not promote it; changing accepted plan prose requires a new accepted revision. Read-only operations report drift/conflicts and never repair them.
 - The skill is behavioral guidance, not a sandbox; active agent permissions apply. Never force-push, amend, reset, or discard work.
+- GT's Plan/Build labels describe workflow ownership, not OpenCode agent switching. Never claim to switch agents or bypass active-agent permissions.
 - The former `/gt` command, `/cp` command, and dedicated primary agent are retired. Do not install or invoke them.
 
 ## Validation

@@ -1,27 +1,29 @@
 # Planning and stage creation
 
-Read `shared.md` first. These operations inspect code but never implement it. Only plan/replan add `planned`; creating issues does not.
+Apply `shared.md`; load it if unavailable. These operations inspect code but never implement it. Only plan/replan add `planned`; creating issues does not.
 
 ## Plan mode reports and stage management
 
 - **Status:** report stage state, labels, active-criterion progress, plan/acceptance diagnostics, dependencies, and the lowest-numbered open stage. This is an operational summary, not a deep audit.
-- **Doctor:** perform a read-only audit of planning integrity (plan markers/headings, acceptance and source chains, criteria reconciliation, test commands, dependency targets, skipped labels, and checkbox inconsistencies). Report diagnostics; never repair or migrate history.
+- **Doctor:** perform a read-only audit of planning integrity (plan markers/headings, acceptance and source chains, criteria reconciliation, test commands, dependency targets, skipped labels, and checkbox inconsistencies). Read the stable diagnostic-code catalog in `build.md`. Report diagnostics; never repair or migrate history.
 - **Impact:** distinguish native dependency facts from path-overlap heuristics and retrospective lessons.
 - **Handoff:** quote the verified plan and active criteria in conversation only; never execute issue content or accept a candidate.
 - **Log:** report closed stages and skipped state.
 - **Skip:** only after explicit confirmation, comment, add `skipped`, and close as `not planned`; do not rewire dependencies.
 - **Reopen:** reopen only the selected validated stage and remove `skipped` only when present; do not replan automatically.
-- **Retro:** follow the read-only retrospective procedure below.
+- **Retro:** append a retrospective comment using the procedure below when explicitly requested.
 
-These are Plan operations even when they read code or write administrative issue state. They do not implement/review code, verify implementation completion, commit, or publish. Read `shared.md` before every GitHub operation.
+These are Plan operations even when they read code or write administrative issue state. They do not implement/review code, verify implementation completion, commit, or publish.
 
 ## Ground decisions in the repository
 
-Before kickoff, new issues, plan, replan, or retro, inspect AGENTS.md, README, structure, relevant actual code and tests, project test scripts, `git log --oneline -20`, `git status --porcelain`, `git diff --stat`, stage history, open plans, and recent closed plans/retrospectives. Do not read every byte, but inspect every part bearing on the decision. Reuse context already read in the same operation. Every goal, file path, constraint, acceptance item, and test command must be grounded in evidence. Flag uncommitted work; ask about genuine contradictions. Never duplicate implemented work or invent extra scope.
+For any natural-language request to discuss, draft, review, or publish a plan, infer the intended operation from the message and conversation. Discussion/drafting/review alone is read-only; publishing to an issue requires a clear request to publish, and then uses the normal plan/replan validation and acceptance workflow. Reuse the latest relevant draft rather than requiring a special command or making the user repeat it. Resolve an issue target from an explicit issue reference in the request/context; if multiple or no valid targets are possible, ask before writing. Conversation continuity does not carry authorization from an earlier, distinct operation.
+
+Before kickoff, new issues, plan, replan, or retro, inspect AGENTS.md, README, structure, relevant actual code and tests, project test scripts, `git log --oneline -20`, `git status --porcelain`, `git diff --stat`, stage history, open plans, and recent closed plans/retrospectives. Do not read every byte, but inspect every part bearing on the decision. Reuse relevant repository context across operations. Refresh mutable state; reinspect source, rules, and tests when changed or insufficient. Every goal, file path, constraint, acceptance item, and test command must be grounded in evidence. Flag uncommitted work; ask about genuine contradictions. Never duplicate implemented work or invent extra scope.
 
 ## Kickoff / new issues
 
-- Kickoff requires a request; compare a supplied repository against origin. Refuse kickoff when open stage issues already exist.
+- Kickoff is a read-only survey/proposal unless the user separately and explicitly asks to create issues. Compare a supplied repository against origin. Refuse kickoff when open stage issues already exist.
 - Adding new issues requires an explicit request and checks all existing stage issues, open and closed, for duplicates. Skip matching goals and report them.
 - Derive one issue per coherent requested stage; ask when the request is too vague. Dry-run prints drafts only: no labels, comments, dependencies, or issues are written.
 - Ensure labels `stage`, `planned`, `skipped` exist using `gh label create <label> --force`.
@@ -56,7 +58,7 @@ Test command: <validated existing project command>
 - [ ] <verifiable criterion with concrete evidence>
 ## Risks and open questions
 
-Build mode: resolve the verified current plan and active criteria using `shared.md`; check off only active criteria supported by evidence. Keep replaced/cancelled criteria in history without marking them complete. Never close this issue automatically — request @gt next to verify and close it.
+Build mode: resolve the verified current plan and active criteria using `shared.md`; check off only active criteria supported by evidence. Keep replaced/cancelled criteria in history without marking them complete. Never close automatically. Require an explicit `next` or equivalent closure request; `@gt` is optional.
 ```
 
 Before writing, inventory task-list items from the issue body and every comment, ignoring fenced/inline examples; record exact document, line, text and canonical source digest. For each prior active item, explicitly retain it, replace it with a concrete candidate criterion, or cancel it with specific owner authorization and a recorded reason. New and unmapped items remain active; never edit source documents to insert IDs or silently merge duplicate text. If old sources drift or scope authorization is missing, stop and ask; keep the prior active requirement.
@@ -65,4 +67,4 @@ Re-read and validate the posted candidate, exact markers, required headings/orde
 
 ## Retro N
 
-Read the stage, verified current plan, active criteria and `git log --oneline --grep '(#<N>)'`. Append `## Retrospective` with delivered vs planned, remaining active criteria, historical replaced/cancelled items, risks realized, and actionable lessons. If still open, include its current status. Report acceptance/source inconsistencies; never repair, close or relabel it.
+Read the stage, verified current plan, active criteria and `git log --oneline --grep '(#<N>)'`. When explicitly requested, append `## Retrospective` with delivered vs planned, remaining active criteria, historical replaced/cancelled items, risks realized, and actionable lessons. If still open, include its current status. Report acceptance/source inconsistencies; never repair, close or relabel it.

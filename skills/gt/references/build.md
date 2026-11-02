@@ -1,6 +1,6 @@
 # Build mode
 
-Build mode owns implementation, code review, implementation verification, commit/publish, and completion gates. It implements only the selected planned stage. Planning reports and stage-management operations belong to Plan mode; read `SKILL.md` for the normative routing table. Read `shared.md` before any GitHub operation. Do not invoke retired commands or another agent as a prerequisite.
+Build mode owns implementation, code review, implementation verification, commit/publish, and completion gates. It implements only the selected planned stage. Planning reports and stage-management operations belong to Plan mode; apply routing from `SKILL.md` and GitHub rules from `shared.md`. Reload only if unavailable, changed, or uncertain. Do not invoke retired commands or another agent as a prerequisite.
 
 ## Build a stage
 
@@ -13,7 +13,7 @@ Build mode owns implementation, code review, implementation verification, commit
 
 - Review requests authorize inspection and validation only, no intentional Git or GitHub writes. Inspect complete staged, unstaged, and untracked changes in scope; check secrets and ignored/generated files. Never silently include unrelated user work.
 - Verify an explicitly selected stage (or, if omitted, the lowest open stage) using the same verified plan and active-criteria resolver as build. Report unchecked active criteria separately from replaced/cancelled history, acceptance/source drift, validated tests, and dirty files. Verify remains read-only; do not close the issue.
-- `@gt next` selects the lowest-numbered open stage. Require a valid accepted plan (or eligible conservative legacy plan), every active criterion checked, passing validated tests, and a clean tree. Pending candidates and unverified acceptance/source chains block closure. Then close only that issue with test and commit evidence. Stop; do not advance another stage.
+- `next` selects the lowest-numbered open stage. Require a valid accepted plan (or eligible conservative legacy plan), every active criterion checked, passing validated tests, and a clean tree. Pending candidates and unverified acceptance/source chains block closure. Then close only that issue with test and commit evidence. Stop; do not advance another stage. `@gt` is optional.
 - Owner-requested close is a separate explicit Build operation; require passing validated tests and a clean tree, and report unchecked criteria. It is distinct from normal `next` behavior.
 
 ## Commit
