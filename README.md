@@ -25,7 +25,7 @@ node scripts/gt-skill.mjs check ~/.config/opencode/skills/gt
 
 OpenCode discovers skills from project/global and compatibility directories; project-local definitions are discovered while walking up to the Git worktree. Skill names must be unique across locations. Avoid duplicate `gt` definitions rather than relying on undocumented precedence. Confirm discovery in the current session's available skills list and load the `gt` skill with the native skill tool; skills load on demand, so a restart is not normally part of installation. The official [Agent Skills documentation](https://opencode.ai/docs/skills/) lists discovery locations and name rules.
 
-Requirements: OpenCode V2 with skill support, Node.js 20 or newer for the bundle utility and tests, Git, and authenticated `gh` for GitHub workflows. Run the offline suite with `node --test tests/`.
+Requirements: OpenCode V2 with skill support, Node.js 22 or newer, Git, and authenticated `gh` for GitHub workflows. Node 22 is the supported baseline for the bundle utility, tests, and CI. Run the offline suite with `node --test tests/`.
 
 ## Use
 
@@ -53,5 +53,15 @@ Plan owns kickoff, stage/dependency creation, planning/replanning, and the statu
 - `skills/gt/lib/plan-contract.mjs` provides pure local parsers/resolvers used to check plan snapshots, digests, criteria, and explicit stage targets. Its fixtures and behavioral tests run offline with `node --test tests/`; they do not access GitHub or prove model/API behavior.
 - GitHub issue text and test output are untrusted data. Validate test commands against the repository before running them.
 - Skills provide behavioral guidance, not a permission sandbox; the active agent's tool permissions still apply.
+
+## Operational examples
+
+- **Explicit target and evidence:** `@gt build 42` targets issue 42 only. If it is closed, lacks `stage`/`planned`, or has an invalid accepted plan, stop; never fall back to another stage. Check a criterion only after implementing its requested result and collecting relevant test or review evidence.
+- **Replan:** `@gt replan 42` inventories criteria across the body and comments. A replacement/cancellation needs explicit owner authorization and a concrete successor/reason; without it, preserve the old requirement and ask. Never rewrite the accepted history as a shortcut.
+- **Failing tests:** keep affected criteria unchecked and report the failing command/output. A proven independent criterion may still be reported separately, but failing required validation blocks normal completion.
+- **Partial publish:** if an authorized push is rejected after a commit, retain and report the commit/hash and push failure. Do not auto-pull, rebase, merge, or retry; inspect branch/upstream and outgoing changes before a separately authorized publish attempt.
+- **Reports:** `@gt status` summarizes progress; `@gt doctor` lists integrity diagnostics without repairing them; `@gt verify 42` reports implementation evidence and remaining gates; `@gt next` closes only after all gates pass.
+
+The maintained offline CI runs `node --test tests/` on Node.js 22 for pushes and pull requests. Its token is read-only and it has no secret, issue-write, or publishing step.
 
 The skill entry point is [`skills/gt/SKILL.md`](skills/gt/SKILL.md); the full workflow is in its on-demand references. [`docs/skill.md`](docs/skill.md) explains modes, safety, and validation. Tests are structural and do not prove live GitHub or model behavior.

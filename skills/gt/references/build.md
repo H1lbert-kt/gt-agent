@@ -30,3 +30,23 @@ An explicit commit request authorizes one commit, not a push. A combined commit-
 An explicit publish request authorizes pushing existing commits only. Require a clean tree. Inspect branch, remote, upstream, outgoing commits, and full outgoing diff; validate the committed state and ensure no unrelated changes or secrets will be published. Stop if destination is unclear, there is no upstream (ask before setting one), or validation fails. Never change remotes or force-push. On rejection, report it without automatically pulling, rebasing, merging, or rewriting history. A failed push does not undo a successful commit; report both outcomes. Publishing never closes a stage.
 
 Build does not own status, log, handoff, impact, doctor, start, skip, reopen, or retro; route these to Plan mode. For Build lifecycle writes, verify the result and report partial failures. Never delete issues or rewrite descriptions. Comments are append-only by default, but an explicit request to overwrite a specific comment authorizes replacing only that comment; verify the target and replacement content first. Never change unrelated issues.
+
+## Doctor catalog (Plan-owned, read-only)
+
+`doctor` is routed to Plan. This catalog is the stable vocabulary for its integrity report; including it here does not make it a Build operation. A doctor report only cites observable evidence and proposes no repair, label change, dependency edit, checkbox update, close, or retry. Omit a code when its condition is not established; say `unknown` rather than guessing when GitHub did not return needed data.
+
+| Code | Severity | Emit only when | Report |
+| --- | --- | --- | --- |
+| `GT-DOC-PLAN-INVALID` | error | No valid current plan can be resolved, or the selected plan has structural/digest/source diagnostics. | Issue and plan/receipt IDs; exact resolver diagnostics; last verifiable plan, if any. |
+| `GT-DOC-ACCEPTANCE-INVALID` | error | An acceptance-required plan is treated as current without a valid receipt, or receipt chain/identity/reconciliation validation fails. | Candidate/receipt IDs, failed link or check, and whether a prior accepted plan remains verifiable. |
+| `GT-DOC-CANDIDATE-PENDING` | warning | A newer acceptance-required candidate exists but has not displaced a valid accepted plan. | Candidate ID and the accepted plan that remains current; do not characterize the candidate as accepted. |
+| `GT-DOC-LABEL-STATE` | error | Observed `planned`/`skipped` labels contradict the verified plan state or the requested stage's lifecycle state. | Exact labels and conflicting plan/state evidence; do not change labels. |
+| `GT-DOC-CRITERIA-SOURCE` | error | An active locator's source is missing, text/digest changed beyond an authorized checkbox-state change, or identity is ambiguous. | Locator/document/line and source mismatch; retain the requirement as unresolved. |
+| `GT-DOC-CRITERIA-RECONCILIATION` | error | A receipt omits, duplicates, or invalidly disposes a prior active criterion, or a replacement lacks a valid successor/authorization. | Prior item ID, disposition, and missing/invalid mapping. |
+| `GT-DOC-CRITERIA-ACTIVE` | warning | Verified active criteria remain unchecked. | Count and exact source/line/text; these still gate completion. |
+| `GT-DOC-CRITERIA-HISTORY` | info | Replaced/cancelled criteria are present in accepted history. | Historical items and their recorded disposition/reason, separately from active gate count. History is not completed work. |
+| `GT-DOC-DEPENDENCY-INVALID` | error | A dependency returned by GitHub references a missing/non-stage target, a self-edge, or another directly verifiable invalid native edge. | The exact returned edge and target evidence. Never infer an edge from issue/ordinal numbering or file overlap. |
+| `GT-DOC-DEPENDENCY-BLOCKED` | warning | GitHub reports an actual open `blockedBy` edge. | Blocker issue number/state and source response; do not treat a merely earlier issue number as a blocker. |
+| `GT-DOC-PARTIAL-OPERATION` | error | A prior operation's recorded result shows requested effects split between success and failure, or its final state is explicitly uncertain. | Operation, confirmed successes, failures/unknowns, and recovery boundary; do not retry or roll back automatically. |
+
+Severity is reporting priority, not permission to mutate. `status` stays a concise operational summary; `doctor` performs the deeper integrity audit; `verify` reports implementation evidence and unchecked criteria; `next` additionally requires all completion gates before closing. All reports remain read-only.

@@ -1,0 +1,79 @@
+[
+  {
+    "name": "invalid selected plan",
+    "code": "GT-DOC-PLAN-INVALID",
+    "severity": "error",
+    "evidence": "The plan resolver reports missing required structure.",
+    "readOnly": true
+  },
+  {
+    "name": "unaccepted candidate",
+    "code": "GT-DOC-ACCEPTANCE-INVALID",
+    "severity": "error",
+    "evidence": "An acceptance-required candidate has no verified receipt and no earlier accepted plan.",
+    "readOnly": true
+  },
+  {
+    "name": "later pending candidate",
+    "code": "GT-DOC-CANDIDATE-PENDING",
+    "severity": "warning",
+    "evidence": "A valid accepted plan remains selected while a later candidate awaits its receipt.",
+    "readOnly": true
+  },
+  {
+    "name": "planned label without accepted plan",
+    "code": "GT-DOC-LABEL-STATE",
+    "severity": "error",
+    "evidence": "The issue has planned but the first acceptance-required plan has no valid receipt.",
+    "readOnly": true
+  },
+  {
+    "name": "criterion source drift",
+    "code": "GT-DOC-CRITERIA-SOURCE",
+    "severity": "error",
+    "evidence": "A recorded active criterion source no longer matches its locator digest.",
+    "readOnly": true
+  },
+  {
+    "name": "incomplete reconciliation",
+    "code": "GT-DOC-CRITERIA-RECONCILIATION",
+    "severity": "error",
+    "evidence": "A prior active criterion has no valid disposition in the receipt.",
+    "readOnly": true
+  },
+  {
+    "name": "active and historical criteria",
+    "code": "GT-DOC-CRITERIA-ACTIVE",
+    "severity": "warning",
+    "evidence": "One active criterion is unchecked; a separately replaced criterion is historical and not part of the gate count.",
+    "readOnly": true
+  },
+  {
+    "name": "reconciled history",
+    "code": "GT-DOC-CRITERIA-HISTORY",
+    "severity": "info",
+    "evidence": "A replaced criterion remains visible as history with its successor locator.",
+    "readOnly": true
+  },
+  {
+    "name": "invalid native dependency edge",
+    "code": "GT-DOC-DEPENDENCY-INVALID",
+    "severity": "error",
+    "evidence": "GitHub returned a blocker edge whose target cannot be found as a stage issue.",
+    "readOnly": true
+  },
+  {
+    "name": "actual open blocker",
+    "code": "GT-DOC-DEPENDENCY-BLOCKED",
+    "severity": "warning",
+    "evidence": "GitHub returned an open blockedBy edge; issue-number ordering alone is not evidence.",
+    "readOnly": true
+  },
+  {
+    "name": "partially completed operation",
+    "code": "GT-DOC-PARTIAL-OPERATION",
+    "severity": "error",
+    "evidence": "Issue creation succeeded but one requested native dependency link failed; no automatic retry or rollback follows.",
+    "readOnly": true
+  }
+]

@@ -32,7 +32,7 @@ Typical cycle: `@gt plan <request>` → `@gt build <issue-number>` → `@gt revi
 
 ## Validation
 
-Run `node --test tests/` with Node.js 20 or newer. These offline structural and bundle-helper tests do not exercise live GitHub or model behavior. See [`skills/gt/SKILL.md`](../skills/gt/SKILL.md) for routing and [`skills/gt/references/`](../skills/gt/references/) for operational rules.
+Run `node --test tests/` with Node.js 22 or newer. Node 22 is the supported baseline and the version used by CI. These offline structural, fixture, and bundle-helper tests do not exercise live GitHub or model behavior. See [`skills/gt/SKILL.md`](../skills/gt/SKILL.md) for routing and [`skills/gt/references/`](../skills/gt/references/) for operational rules.
 
 ### Deterministic contract helper
 
@@ -46,6 +46,11 @@ Fixtures in `tests/fixtures/plan-contract/` are local inert input snapshots. `ag
 - If the relevant criterion test fails or cannot run, leave that criterion unchecked. If an unrelated suite test fails but the criterion is independently proven, record the criterion evidence and report the suite failure separately; normal stage completion remains blocked.
 - Before changing a checkbox, reread the exact issue body or comment, compare the target line/context with what was reviewed, change only `[ ]` to `[x]`, then reread and verify. If another edit changed the target meanwhile or identical lines make it ambiguous, stop and ask. This reduces stale-write risk but cannot close the race between reread and API write.
 - `@gt commit 42` uses issue 42 for the stage commit reference after validating it; `@gt commit` without a stage target resolves the lowest open stage anew. A plain local commit does not use GitHub, and a failed explicit target never falls back.
+- `@gt build 42` stops if issue 42 is closed, lacks `stage`/`planned`, or has an invalid accepted plan; it never silently builds another issue. Check a criterion only after the requested outcome has concrete implementation and test/review evidence.
+- `@gt replan 42` preserves active requirements unless the owner specifically authorizes a replacement with a concrete successor or cancellation with a reason. Without authorization, keep the requirement and ask rather than rewriting history.
+- If a relevant test fails or cannot run, leave its dependent criterion unchecked and report the failure. An unrelated suite failure does not erase separately proven evidence, but failing required validation blocks normal completion.
+- If `@gt publish` is rejected after a commit succeeded, report the retained commit hash and push failure. Do not automatically pull, rebase, merge, or retry; inspect upstream and outgoing changes before a separately authorized publish.
+- `@gt status` is a concise progress report; `@gt doctor` is a deeper read-only integrity audit; `@gt verify 42` reports implementation evidence; `@gt next` additionally enforces all closure gates.
 
 ### Replanning examples
 

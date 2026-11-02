@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,6 +12,8 @@ const build = readFileSync(join(skillRoot, "references", "build.md"), "utf8");
 const shared = readFileSync(join(skillRoot, "references", "shared.md"), "utf8");
 const readme = readFileSync(join(root, "README.md"), "utf8");
 const guide = readFileSync(join(root, "docs", "skill.md"), "utf8");
+const workflow = readFileSync(join(root, ".github", "workflows", "tests.yml"), "utf8");
+const doctorCases = JSON.parse(readFileSync(join(root, "tests", "fixtures", "doctor-cases.json"), "utf8"));
 
 test("skill exposes only plan and build modes without a primary-agent setup", () => {
   assert.match(entry, /^---\nname: gt\ndescription: .+\n---\n/);
@@ -81,6 +83,50 @@ test("build reference combines implementation, lifecycle, commit, and publish sa
   }
 });
 
+test("doctor catalog is stable, evidence-based, and covered by inert read-only cases", () => {
+  assert.match(build, /^## Doctor catalog \(Plan-owned, read-only\)$/m);
+  const codes = [...build.matchAll(/`(GT-DOC-[A-Z-]+)`/g)].map((match) => match[1]);
+  assert.equal(new Set(codes).size, codes.length, "catalog codes are unique");
+  assert.ok(codes.length >= 10);
+  assert.equal(new Set(doctorCases.map(({ code }) => code)).size, doctorCases.length);
+  for (const item of doctorCases) {
+    assert.ok(codes.includes(item.code), `fixture references undocumented code ${item.code}`);
+    assert.ok(["error", "warning", "info"].includes(item.severity));
+    assert.equal(item.readOnly, true);
+    assert.ok(item.evidence.length > 0);
+  }
+  for (const code of codes) {
+    assert.ok(doctorCases.some((item) => item.code === code), `catalog code lacks fixture: ${code}`);
+  }
+  assert.match(build, /Never infer an edge from issue\/ordinal numbering/);
+  assert.match(build, /no repair, label change, dependency edit, checkbox update, close, or retry/);
+  assert.match(build, /`status` stays a concise operational summary[\s\S]*`doctor` performs the deeper integrity audit[\s\S]*`verify` reports implementation evidence[\s\S]*`next` additionally requires/);
+});
+
+test("CI uses supported Node 22 with read-only permissions and no credentials", () => {
+  assert.match(workflow, /^on:\n  push:\n  pull_request:/m);
+  assert.match(workflow, /permissions:\n  contents: read/);
+  assert.match(workflow, /node-version: 22/);
+  assert.match(workflow, /run: node --test tests\//);
+  assert.match(workflow, /persist-credentials: false/);
+  assert.doesNotMatch(workflow, /secrets\.|issues:\s*write|contents:\s*write|gh issue|git push/i);
+  for (const text of [readme, guide]) assert.match(text, /Node\.js 22 or newer/);
+  assert.match(readme, /offline CI runs `node --test tests\/` on Node\.js 22/);
+});
+
+test("local Markdown links in maintained docs resolve within the repository", () => {
+  const docs = ["README.md", "docs/skill.md", "skills/gt/SKILL.md",
+    "skills/gt/references/planning.md", "skills/gt/references/build.md", "skills/gt/references/shared.md"];
+  for (const file of docs) {
+    const text = readFileSync(join(root, file), "utf8");
+    for (const [, target] of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+      if (/^(?:https?:|mailto:|#)/i.test(target)) continue;
+      const localTarget = target.split("#", 1)[0];
+      if (localTarget) assert.ok(existsSync(join(dirname(join(root, file)), localTarget)), `${file}: broken link ${target}`);
+    }
+  }
+});
+
 test("shared repository rules retain guards, issue identity, and safe test validation", () => {
   for (const literal of ["git remote get-url origin", "without `-R`", "lowest-numbered",
     "ALL comments", "fenced code", "<!-- gt:plan v2 -->", "<!-- gt:plan -->",
@@ -134,7 +180,7 @@ test("bundle installation docs define read-only checks, explicit external sync, 
   }
   assert.match(readme, /--confirm-external/);
   assert.match(readme, /`check` is read-only/);
-  assert.match(guide, /Node\.js 20 or newer/);
+  assert.match(guide, /Node\.js 22 or newer/);
 });
 
 test("retired command, agent, and historical documentation artifacts are absent", () => {
