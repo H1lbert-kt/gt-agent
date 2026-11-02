@@ -1,0 +1,5 @@
+[
+  { "number": 18, "state": "OPEN", "labels": [{ "name": "stage" }] },
+  { "number": 23, "state": "OPEN", "labels": [{ "name": "stage" }] },
+  { "number": 11, "state": "CLOSED", "labels": [{ "name": "stage" }] }
+]

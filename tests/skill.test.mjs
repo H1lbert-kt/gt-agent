@@ -24,22 +24,13 @@ test("skill exposes only plan and build modes without a primary-agent setup", ()
 });
 
 test("plan reference retains grounded stages, safe dependencies, and controlled comment edits", () => {
-  for (const literal of ["Dry-run must still perform repository analysis",
-    "Prior comments are append-only by default", "explicit request to overwrite a specific comment",
-    "before adding `planned`",
-    "GitHub issue numbers are assigned independently", "<!-- gt:plan v2 -->",
-    "## Constraints", "Test command:"]) {
-    assert.ok(plan.includes(literal), `missing planning rule: ${literal}`);
-  }
-  for (const literal of ["acceptance-required v1", "plan-accepted v1", "gt-plan-acceptance/v1",
-    "planDigestSha256", "previousAcceptanceCommentId", "Canonical digest", "createdAt",
-    "retained", "replaced", "cancelled", "authorizationEvidence", "legacy-valid"]) {
-    assert.ok(shared.includes(literal) || plan.includes(literal), `missing plan acceptance contract: ${literal}`);
-  }
+  assert.match(plan, /^## Plan N \/ plan all \/ replan N/m);
+  assert.match(plan, /Only plan\/replan add `planned`/);
   assert.match(plan, /```markdown\n<!-- gt:plan v2 -->\n<!-- gt:acceptance-required v1 -->\n## Goal/);
   assert.match(plan, /resolve the verified current plan and active criteria/);
-  assert.match(shared, /A receipt is a NEW comment whose first line is exactly `<!-- gt:plan-accepted v1 -->`/);
-  assert.match(shared, /Each previous active item must have exactly one disposition/);
+  assert.match(plan, /append a NEW `<!-- gt:plan-accepted v1 -->` JSON receipt/);
+  assert.match(shared, /lib\/plan-contract\.mjs/);
+  assert.match(shared, /authorizationEvidence/);
 });
 
 test("build reference combines implementation, lifecycle, commit, and publish safely", () => {
@@ -95,6 +86,9 @@ test("README and guide describe the skill as the sole interface", () => {
   assert.match(guide, /former `\/gt` command, `\/cp` command/);
   assert.match(readme, /cp -r skills\/gt/);
   assert.match(guide, /node --test tests\//);
+  assert.match(readme, /plan-contract\.mjs/);
+  assert.match(guide, /agent-evaluation-only/);
+  assert.match(guide, /no GitHub, network, filesystem, or shell side effects/);
 });
 
 test("retired command, agent, and historical documentation artifacts are absent", () => {

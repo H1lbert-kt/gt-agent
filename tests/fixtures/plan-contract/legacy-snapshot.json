@@ -1,0 +1,21 @@
+{
+  "number": 9,
+  "body": "- [ ] issue criterion\n",
+  "comments": [
+    {
+      "id": "C1",
+      "bodyFixture": "plan-v1-valid.md",
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "C2",
+      "body": "- [ ] unrelated comment item\n",
+      "createdAt": "2026-01-02T00:00:00Z"
+    },
+    {
+      "id": "C3",
+      "bodyFixture": "plan-v2-invalid-order.md",
+      "createdAt": "2026-01-03T00:00:00Z"
+    }
+  ]
+}

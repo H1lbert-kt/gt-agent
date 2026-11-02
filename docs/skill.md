@@ -26,6 +26,12 @@ Typical cycle: `@gt plan <request>` → `@gt build <issue-number>` → `@gt revi
 
 Run `node --test tests/`. These structural checks do not exercise live GitHub or model behavior. See [`skills/gt/SKILL.md`](../skills/gt/SKILL.md) for routing and [`skills/gt/references/`](../skills/gt/references/) for operational rules.
 
+### Deterministic contract helper
+
+[`skills/gt/lib/plan-contract.mjs`](../skills/gt/lib/plan-contract.mjs) exports pure functions for exact plan parsing, checkbox-aware canonical digests, task-item locators, accepted-plan/receipt snapshot resolution, active-versus-historical criteria, and explicit stage target selection. The GT flow supplies a freshly read issue snapshot and uses the helper's structured diagnostics before deciding; the helper itself has no GitHub, network, filesystem, or shell side effects and never executes a plan's test command. It complements—not replaces—the operational repo guard, permissions, reread, and write protocols in `shared.md`.
+
+Fixtures in `tests/fixtures/plan-contract/` are local inert input snapshots. `agent-scenarios.json` marks malicious-comment, race, and partial-publication cases as `agent-evaluation-only`: their expected responses are documented, but local tests cannot establish model resistance, live concurrency, GitHub integration, or API atomicity. The suite is designed to run without GitHub credentials or network access.
+
 ### Operational examples
 
 - `@gt build 42` targets issue 42 only after confirming it is an open, planned stage; it never substitutes the lowest issue if 42 is invalid. A qualifying criterion can be checked only after its outcome has concrete evidence.
