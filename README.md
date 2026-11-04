@@ -4,7 +4,7 @@ GT is an OpenCode skill that defines a project workflow: understand, plan work a
 
 ## Demo
 
-[▶ Assista ao vídeo demonstrando o GT (8min45s)](video_gt.mp4)
+[▶ Assista à demonstração do GT no LinkedIn](https://www.linkedin.com/feed/update/urn:li:activity:7523744998689808384/)
 
 ## Install
 
