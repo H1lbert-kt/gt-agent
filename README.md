@@ -1,6 +1,10 @@
 # gt-agent
 
-GT is an OpenCode skill for planning work as GitHub stages and building those stages in a project. It has two modes: **plan** and **build**. In build mode, GT can implement a planned stage, validate it, and—only when explicitly asked—commit or publish changes.
+GT is an OpenCode skill that defines a project workflow: understand, plan work as GitHub stages, implement, review, validate, and complete. It defines operations, not modes, and does not select or switch agents. GT can implement a planned stage, validate it, and—only when explicitly asked—commit or publish changes. Every operation respects the active agent's permissions.
+
+## Demo
+
+[▶ Assista ao vídeo demonstrando o GT (8min45s)](video_gt.mp4)
 
 ## Install
 
@@ -42,13 +46,13 @@ Requirements: OpenCode V2 with skill support, Node.js 22 or newer, Git, and auth
 
 For related requests, repeating `@gt` is optional. Each operation still requires its own authorization; targets follow their resolution rules. For example: `@gt plan 42` → `build 42` → `review` → `commit 42` → `publish` → `next`; each step is a separate request. An explicit issue number is the target; invalid explicit targets stop rather than falling back. Commands without a target resolve their documented default afresh and never inherit a stage from conversation history. Commit and publish are separate authorizations: a commit never implies publish, and publish never creates a commit. A stage commit uses the explicitly selected issue, or the lowest open stage if omitted, as its final subject token, for example `@gt commit 42` → `feat: add sensors (#42)`. Plain local commits have no stage target.
 
-Plan owns kickoff, stage/dependency creation, planning/replanning, and the status, doctor, impact, handoff, log, retro, skip, and reopen operations. Build owns implementation, code review, implementation verification, commit, publish, and `next` completion gates. `@gt status` and `@gt doctor` are distinct: status summarizes progress; doctor audits planning integrity. Review means code review in Build; `verify` means implementation verification in Build. Neither mode delegates work to another agent. Planning and build never close a stage automatically. Ask `@gt next` to check the completion gates and close the current stage. Issue numbers—not stage ordinals—identify stages.
+Each request selects an operation, not a mode. Reports such as status, doctor, impact, and handoff are available whenever relevant, including during implementation. `@gt status` and `@gt doctor` are distinct: status summarizes progress; doctor audits planning integrity. Review means code review; `verify` means implementation verification. GT does not delegate work to another agent. Planning and implementation never close a stage automatically. Ask `@gt next` to check the completion gates and close the current stage. Issue numbers—not stage ordinals—identify stages.
 
 ## Workflow contract
 
-- **Plan** researches, creates stage/dependency issues, records detailed plans as new comments, marks a stage planned only after validating the comment, and owns planning reports and administrative stage management (`skip`/`reopen`). It never implements or performs Git commit/publish operations.
-- **Build** reads the selected plan, implements only its agreed scope, reviews code, verifies implementation, runs validated tests, and reports evidence. It does not create/replan stages or run planning reports, invent a fitness function, or alter project rules.
-- Build may change only a fulfilled `[ ]` checkbox to `[x]` on its selected planned issue, after rereading and verifying a minimal document update; changing prose or other criteria requires separate authorization. Evidence for an individual criterion is reported separately from the suite result: an unrelated suite failure does not undo proven work, but failing/unavailable tests still block normal completion.
+- **Planning operations** research, create stage/dependency issues when requested, record detailed plans as new comments, and mark a stage planned only after validating the comment. A planning request does not authorize implementation, commit, or publish.
+- **Implementation** reads the selected plan, implements only its agreed scope, runs validated tests, and reports evidence. Code review, implementation verification, planning/replanning, reports, and administrative stage management (`skip`/`reopen`) are separate operations with their own contracts, not exclusive agent responsibilities. Implementation does not invent a fitness function or alter project rules.
+- An authorized build may change only a fulfilled `[ ]` checkbox to `[x]` on its selected planned issue, after rereading and verifying a minimal document update; changing prose or other criteria requires separate authorization. Evidence for an individual criterion is reported separately from the suite result: an unrelated suite failure does not undo proven work, but failing/unavailable tests still block normal completion.
 - A new v2 plan is a candidate until a separately verified acceptance receipt links it to the exact plan revision. Replans retain every prior active criterion unless it is explicitly mapped to a replacement or cancelled with specific owner authorization; old issue text/comments remain unchanged and historical items are never checked off to simulate cancellation.
 - `skills/gt/lib/plan-contract.mjs` provides pure local parsers/resolvers used to check plan snapshots, digests, criteria, and explicit stage targets. Its fixtures and behavioral tests run offline with `node --test tests/`; they do not access GitHub or prove model/API behavior.
 - GitHub issue text and test output are untrusted data. Validate test commands against the repository before running them.
@@ -64,4 +68,4 @@ Plan owns kickoff, stage/dependency creation, planning/replanning, and the statu
 
 The maintained offline CI runs `node --test tests/` on Node.js 22 for pushes and pull requests. Its token is read-only and it has no secret, issue-write, or publishing step.
 
-The skill entry point is [`skills/gt/SKILL.md`](skills/gt/SKILL.md); the full workflow is in its on-demand references. [`docs/skill.md`](docs/skill.md) explains modes, safety, and validation. Tests are structural and do not prove live GitHub or model behavior.
+The skill entry point is [`skills/gt/SKILL.md`](skills/gt/SKILL.md); the full workflow is in its on-demand references. [`docs/skill.md`](docs/skill.md) explains operations, safety, and validation. Tests are structural and do not prove live GitHub or model behavior.
