@@ -20,6 +20,10 @@ The typical workflow is **understand → plan → implement → review → verif
 
 Operation distinctions: `status` is a progress overview while `doctor` is a planning-integrity audit; `review` is code review and `verify` is implementation verification; `next` is normal gated completion, while `skip` and `reopen` are administrative operations. `references/planning.md` and `references/execution.md` group operation contracts for on-demand reading; they do not assign exclusive responsibilities to agents.
 
+## Stage issue structure and labels
+
+New stage issues use the [stage issue template](../.github/ISSUE_TEMPLATE/stage.md) and [label taxonomy](../skills/gt/references/issue-taxonomy.md). For example, a stage about improving issue templates can use `enhancement`, `area:issues`, and `stage`; priority is omitted unless the request explicitly provides it. A planning bug may use `bug` and `area:planning`, with `priority:p1` or `priority:p2` only when supported. `planned` and `skipped` remain lifecycle labels, not classification. Existing issue labels and history are preserved; creation does not trigger retroactive reclassification.
+
 For related requests, repeating `@gt` is optional. An explicit issue number wins; a unique contextual reference (for example, “continue with that issue”) can identify a target after refreshing and validating its current state. If multiple issues could be meant, ask; if the target is invalid, stop without falling back. Context identifies a target but never transfers authorization from a previous request. In a compound request, run only clearly authorized operations, validate each operation independently, and report partial outcomes; do not infer commit, publish, close, or follow-up steps. For example, “verify issue 42, then commit and push it” explicitly requests those operations, but each still has its own gates. Commit never implies a push; publish never creates a commit. `next` closes only after a valid published v3 plan or accepted/eligible legacy plan, all active criteria are checked, validated tests pass, and the tree is clean.
 
 ## Safety

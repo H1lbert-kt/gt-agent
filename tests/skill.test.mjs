@@ -13,6 +13,8 @@ const shared = readFileSync(join(skillRoot, "references", "shared.md"), "utf8");
 const readme = readFileSync(join(root, "README.md"), "utf8");
 const guide = readFileSync(join(root, "docs", "skill.md"), "utf8");
 const workflow = readFileSync(join(root, ".github", "workflows", "tests.yml"), "utf8");
+const stageTemplate = readFileSync(join(root, ".github", "ISSUE_TEMPLATE", "stage.md"), "utf8");
+const taxonomy = readFileSync(join(skillRoot, "references", "issue-taxonomy.md"), "utf8");
 const doctorCases = JSON.parse(readFileSync(join(root, "tests", "fixtures", "doctor-cases.json"), "utf8"));
 
 test("skill defines a workflow without managing modes or agents", () => {
@@ -25,11 +27,37 @@ test("skill defines a workflow without managing modes or agents", () => {
   assert.doesNotMatch(entry, /agent:|permission:|\$ARGUMENTS|primary agent/);
   assert.match(entry, /Do not run the retired `\/gt` or `\/cp` commands/);
   assert.deepEqual(readdirSync(join(skillRoot, "references")).sort(), [
-    "execution.md", "planning.md", "shared.md",
+    "execution.md", "issue-taxonomy.md", "planning.md", "shared.md",
   ]);
   for (const text of [entry, plan, execution, shared, readme, guide]) {
     assert.doesNotMatch(text, /two modes|\| Mode \||\b(?:Plan|Build) mode\b|\b(?:Plan|Build) owns\b|\bowning mode\b|Plan-owned|Build does not own|references\/build\.md/i);
   }
+});
+
+test("stage template and issue taxonomy stay complete, compact, and conservative", () => {
+  for (const heading of ["## Pedido do responsável", "## Contexto e problema", "## Resultado esperado",
+    "## Escopo incluído", "## Fora do escopo", "## Critérios de aceite", "## Classificação"]) {
+    assert.ok(stageTemplate.includes(heading), `stage template is missing ${heading}`);
+  }
+  assert.match(stageTemplate, /^labels: stage$/m);
+  assert.match(stageTemplate, /não adicione `planned` ou `skipped`/);
+
+  const rows = taxonomy.split("\n").filter((line) => /^\| `[^`]+` \| .+ \| `?[A-Fa-f0-9]{6}/.test(line));
+  const labels = rows.map((line) => line.match(/^\| `([^`]+)`/)[1]);
+  assert.equal(new Set(labels).size, labels.length, "taxonomy labels are unique");
+  assert.deepEqual(labels.filter((label) => label.startsWith("area:")), [
+    "area:interaction", "area:planning", "area:issues", "area:relationships", "area:workflow", "area:quality",
+  ]);
+  assert.ok(labels.includes("bug") && labels.includes("enhancement") && labels.includes("documentation"));
+  assert.ok(labels.includes("priority:p1") && labels.includes("priority:p2"));
+  assert.match(taxonomy, /All area labels use the same blue family color `1D76DB`/);
+  assert.match(taxonomy, /Omit unknown dimensions/);
+  assert.match(taxonomy, /do not bulk-reclassify existing issues/);
+  assert.match(taxonomy, /color and descriptions carry the meaning|names and descriptions carry the meaning/);
+  assert.match(plan, /references\/issue-taxonomy\.md/);
+  assert.match(plan, /omit unknown dimensions rather than guessing/);
+  assert.match(guide, /Stage issue structure and labels/);
+  assert.match(guide, /priority is omitted unless the request explicitly provides it/);
 });
 
 test("operations table preserves effects and reference contracts without mode ownership", () => {
@@ -164,7 +192,8 @@ test("CI uses supported Node 22 with read-only permissions and no credentials", 
 
 test("local Markdown links in maintained docs resolve within the repository", () => {
   const docs = ["README.md", "docs/skill.md", "skills/gt/SKILL.md",
-    "skills/gt/references/planning.md", "skills/gt/references/execution.md", "skills/gt/references/shared.md"];
+    "skills/gt/references/planning.md", "skills/gt/references/execution.md", "skills/gt/references/shared.md",
+    "skills/gt/references/issue-taxonomy.md"];
   for (const file of docs) {
     const text = readFileSync(join(root, file), "utf8");
     for (const [, target] of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {

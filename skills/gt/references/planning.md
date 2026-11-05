@@ -29,8 +29,9 @@ Before kickoff, new issues, plan, replan, or retro, inspect AGENTS.md, README, s
 - Adding new issues requires an explicit request and checks all existing stage issues, open and closed, for duplicates. Skip matching goals and report them.
 - Derive one issue per coherent requested stage; ask when the request is too vague. Dry-run prints drafts only: no labels, comments, dependencies, or issues are written.
 - Ensure labels `stage`, `planned`, `skipped` exist using `gh label create <label> --force`.
-- Create ordered issues using `gh issue create --label stage`, titled `Stage N: <name>`. Continue the existing stage-title ordinal for N; GitHub issue numbers are assigned independently. Always report both ordinal and actual issue number; subsequent operations use the actual issue number.
-- First body: `## Request from owner`, quoted request, short goal, brief acceptance checklist. Subsequent bodies reference that first issue and contain their own short goal/checklist. No detailed plans or `planned` yet.
+- Use the reusable `.github/ISSUE_TEMPLATE/stage.md` structure and the taxonomy in `references/issue-taxonomy.md`. Attach `stage` and only existing type/area/priority labels supported by the request; omit unknown dimensions rather than guessing. Do not add `planned` or `skipped` during issue creation, create duplicate labels, or reclassify existing issues as a side effect.
+- Create ordered issues using `gh issue create` with `stage` and any supported classification labels, titled `Stage N: <name>`. Continue the existing stage-title ordinal for N; GitHub issue numbers are assigned independently. Always report both ordinal and actual issue number; subsequent operations use the actual issue number.
+- Keep the first body grounded in the quoted request and use the template's context/problem, expected result, scope, exclusions, and verifiable acceptance criteria. Subsequent bodies reference the first issue and contain their own scoped result/checklist. No detailed plans or `planned` yet.
 - Link native dependencies only when an artifact, file ordering, or explicit requirement actually demands them. Independent stages get no edge. Report each edge and verify it.
 - Report partial creation/link failures and exactly what succeeded; never delete issues to roll back. Finish with issue URLs/numbers and suggest explicit planning, then stop.
 
