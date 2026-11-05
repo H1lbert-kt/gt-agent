@@ -32,6 +32,33 @@ function receiptComment(id, receipt, createdAt, issueNumber = 9) {
   return comment(id, `<!-- gt:plan-accepted v1 -->\n\`\`\`json\n${JSON.stringify(receipt, null, 2)}\n\`\`\``, createdAt, issueNumber);
 }
 
+function v3PlanComment(id, body, createdAt, issueNumber = 9) {
+  const v3 = body.replace("<!-- gt:plan v2 -->\n<!-- gt:acceptance-required v1 -->", "<!-- gt:plan v3 -->\n");
+  const explicit = v3.replace("- [ ] The v2 plan is structurally valid.", "- [ ] [criterion:core] The v3 plan is structurally valid.");
+  return comment(id, explicit, createdAt, issueNumber);
+}
+
+function publicationComment(id, plan, previousPublicationCommentId, transitions, createdAt, issueNumber = 9, legacyRecovery) {
+  const criteria = [...plan.body.matchAll(/^\s*[-*]\s+\[([ xX])\]\s+\[criterion:([a-z0-9][a-z0-9._-]{0,63})\]\s+(.+?)\s*$/gim)]
+    .map(([, , criterionId, text]) => ({
+      id: criterionId.toLowerCase(),
+      text: text.trim(),
+      digestSha256: createHash("sha256").update(text.trim(), "utf8").digest("hex"),
+    }));
+  const record = {
+    schema: "gt-plan-publication/v2",
+    issueNumber,
+    planCommentId: plan.id,
+    planUrl: plan.url,
+    planDigestSha256: digestText(plan.body),
+    previousPublicationCommentId,
+    criteria,
+    transitions,
+  };
+  if (legacyRecovery) record.legacyRecovery = legacyRecovery;
+  return comment(id, `<!-- gt:plan-published v2 -->\n\`\`\`json\n${JSON.stringify(record, null, 2)}\n\`\`\``, createdAt, issueNumber);
+}
+
 function makeReceipt(issueNumber, plan, previousAcceptanceCommentId, documents, reconciliation) {
   const items = documents.flatMap(([document, body]) => extractTaskItems(issueNumber, document, body));
   const receipt = {
@@ -57,6 +84,18 @@ test("accepts exact legacy/current plan markers and rejects marker lookalikes", 
   assert.equal(parsePlanComment("```md\n<!-- gt:plan v2 -->\n```\n").valid, false);
   assert.equal(parsePlanComment("<!-- gt:plan-accepted v1 -->\n```json\n{}\n```\n").valid, false);
   assert.equal(parsePlanComment(v2.replace("<!-- gt:acceptance-required v1 -->", "<!-- gt:acceptance-required v9 -->")).valid, false);
+});
+
+test("v3 plans require explicit uniquely identified criteria, not incidental checklists", () => {
+  const v3 = v3PlanComment("C31", v2, "2026-01-01T00:00:00Z");
+  const parsed = parsePlanComment(v3);
+  assert.equal(parsed.valid, true, parsed.diagnostics.join("; "));
+  assert.equal(parsed.version, 3);
+  assert.equal(parsed.requiresPublication, true);
+  assert.equal(parsePlanComment(v3.body.replace("[criterion:core]", "[criterion:Core]")).valid, true);
+  assert.equal(parsePlanComment(v3.body.replace("[criterion:core]", "[criterion:bad id]")).valid, false);
+  assert.equal(parsePlanComment(v3.body.replace("[criterion:core]", "[criterion:other]\n- [ ] [criterion:other]")).valid, false);
+  assert.equal(parsePlanComment(v3.body.replace("[criterion:core] ", "")).valid, false);
 });
 
 test("rejects reordered, incomplete, duplicated, and empty test sections", () => {
@@ -141,6 +180,162 @@ test("pending acceptance-required plans do not become legacy plans", () => {
   assert.equal(result.valid, false);
   assert.equal(result.plan, null);
   assert.ok(result.diagnostics.some((message) => message.includes("pending without a receipt")));
+});
+
+test("v3 pending candidate does not replace the current legacy plan or activate its checklist", () => {
+  const legacy = comment("C32", v1, "2026-01-01T00:00:00Z");
+  const pending = v3PlanComment("C33", v2, "2026-01-02T00:00:00Z");
+  const issue = { number: 9, body: "", comments: [legacy, pending] };
+  const result = resolveCurrentPlan(issue);
+  assert.equal(result.valid, true);
+  assert.equal(result.plan.id, legacy.id);
+  assert.ok(result.diagnostics.some((message) => message.includes("v3 plan is pending")));
+  assert.ok(!result.activeCriteria.some((item) => item.document === pending.id));
+});
+
+test("v3 publication selects declared criteria and ignores incidental task lists", () => {
+  const issueNumber = 9;
+  const body = "- [ ] incidental issue checklist\n";
+  const plan = v3PlanComment("C34", v2, "2026-01-01T00:00:00Z", issueNumber);
+  const publication = publicationComment("C35", plan, null, [], "2026-01-02T00:00:00Z", issueNumber);
+  const pending = resolveCurrentPlan({ number: issueNumber, body, comments: [plan] });
+  assert.equal(pending.valid, false);
+  assert.ok(pending.diagnostics.some((message) => message.includes("pending")));
+  const result = resolveCurrentPlan({ number: issueNumber, body, comments: [plan, publication] });
+  assert.equal(result.valid, true, result.diagnostics.join("; "));
+  assert.equal(result.plan.id, plan.id);
+  assert.equal(result.publication.id, publication.id);
+  assert.deepEqual(result.activeCriteria.map((item) => [item.id, item.text, item.checked]), [
+    ["core", "The v3 plan is structurally valid.", false],
+  ]);
+  assert.equal(result.activeCriteria.some((item) => item.text.includes("incidental")), false);
+});
+
+test("v3 revisions preserve stable criterion identity across unrelated edits and reject changed text", () => {
+  const issueNumber = 9;
+  const planASeed = v3PlanComment("C36", v2, "2026-01-01T00:00:00Z", issueNumber);
+  const coreLine = "- [ ] [criterion:core] The v3 plan is structurally valid.";
+  const planABody = planASeed.body.replace(coreLine, `${coreLine}\n- [ ] [criterion:extra] A second independent criterion.`);
+  const planA = comment("C36", planABody, "2026-01-01T00:00:00Z", issueNumber);
+  const publicationA = publicationComment("C37", planA, null, [], "2026-01-02T00:00:00Z", issueNumber);
+  const changedOutsideCriterion = planA.body
+    .replace("A deterministic parser fixture.", "An edited non-criterion plan detail.")
+    .replace(`${coreLine}\n- [ ] [criterion:extra] A second independent criterion.`,
+      `- [ ] [criterion:extra] A second independent criterion.\n${coreLine}`);
+  const planB = comment("C38", changedOutsideCriterion, "2026-01-03T00:00:00Z", issueNumber);
+  const publicationB = publicationComment("C39", planB, publicationA.id, [
+    { id: "core", status: "retained" },
+    { id: "extra", status: "retained" },
+  ], "2026-01-04T00:00:00Z", issueNumber);
+  const good = resolveCurrentPlan({ number: issueNumber, body: "", comments: [planA, publicationA, planB, publicationB] });
+  assert.equal(good.valid, true, good.diagnostics.join("; "));
+  assert.deepEqual(good.activeCriteria.map((item) => item.id), ["extra", "core"]);
+  assert.equal(good.activeCriteria[1].text, "The v3 plan is structurally valid.");
+
+  const alteredCriterion = planB.body.replace("The v3 plan is structurally valid.", "Changed criterion text.");
+  const planC = comment("C40", alteredCriterion, "2026-01-05T00:00:00Z", issueNumber);
+  const publicationC = publicationComment("C41", planC, publicationB.id, [
+    { id: "core", status: "retained" },
+    { id: "extra", status: "retained" },
+  ], "2026-01-06T00:00:00Z", issueNumber);
+  const bad = resolveCurrentPlan({
+    number: issueNumber, body: "", comments: [planA, publicationA, planB, publicationB, planC, publicationC],
+  });
+  assert.equal(bad.valid, false);
+  assert.ok(bad.diagnostics.some((message) => message.includes("Retained criterion changed")));
+});
+
+test("v3 authorized replacement records history and does not inherit completion", () => {
+  const issueNumber = 9;
+  const planA = v3PlanComment("C47", v2, "2026-01-01T00:00:00Z", issueNumber);
+  const completedA = comment("C48", planA.body.replace("[ ] [criterion:core]", "[x] [criterion:core]"),
+    "2026-01-02T00:00:00Z", issueNumber);
+  const publicationA = publicationComment("C49", completedA, null, [], "2026-01-03T00:00:00Z", issueNumber);
+  const planB = comment("C50", completedA.body.replace("[x] [criterion:core] The v3 plan is structurally valid.",
+    "[ ] [criterion:successor] The replacement criterion is verifiable."), "2026-01-04T00:00:00Z", issueNumber);
+  const transition = {
+    id: "core", status: "replaced", replacementIds: ["successor"],
+    authorizationEvidence: "Owner explicitly authorized this named replacement in the active request.",
+  };
+  const publicationB = publicationComment("C51", planB, publicationA.id, [transition], "2026-01-05T00:00:00Z", issueNumber);
+  const result = resolveCurrentPlan({ number: issueNumber, body: "", comments: [completedA, publicationA, planB, publicationB] });
+  assert.equal(result.valid, true, result.diagnostics.join("; "));
+  assert.deepEqual(result.activeCriteria.map((item) => [item.id, item.checked]), [["successor", false]]);
+  assert.deepEqual(result.historicalCriteria.map((item) => [item.id, item.checked]), [["core", true]]);
+
+  const unauthorized = publicationComment("C52", planB, publicationA.id, [{
+    ...transition, authorizationEvidence: "",
+  }], "2026-01-05T00:00:01Z", issueNumber);
+  const invalid = resolveCurrentPlan({ number: issueNumber, body: "", comments: [completedA, publicationA, planB, unauthorized] });
+  assert.equal(invalid.valid, false);
+  assert.ok(invalid.diagnostics.some((message) => message.includes("Replacement transition is incomplete or unauthorized")));
+});
+
+test("v3 cancellation requires specific authorization and records the cancelled criterion", () => {
+  const issueNumber = 9;
+  const planASeed = v3PlanComment("C53", v2, "2026-01-01T00:00:00Z", issueNumber);
+  const core = "- [ ] [criterion:core] The v3 plan is structurally valid.";
+  const planA = comment("C53", planASeed.body.replace(core, `${core}\n- [ ] [criterion:obsolete] An obsolete obligation.`),
+    "2026-01-01T00:00:00Z", issueNumber);
+  const publicationA = publicationComment("C54", planA, null, [], "2026-01-02T00:00:00Z", issueNumber);
+  const planB = comment("C55", planA.body.replace("\n- [ ] [criterion:obsolete] An obsolete obligation.", ""),
+    "2026-01-03T00:00:00Z", issueNumber);
+  const transitions = [
+    { id: "core", status: "retained" },
+    { id: "obsolete", status: "cancelled", reason: "Owner withdrew this specific obligation.",
+      authorizationEvidence: "Owner explicitly authorized cancellation in the active request." },
+  ];
+  const publicationB = publicationComment("C56", planB, publicationA.id, transitions, "2026-01-04T00:00:00Z", issueNumber);
+  const result = resolveCurrentPlan({ number: issueNumber, body: "", comments: [planA, publicationA, planB, publicationB] });
+  assert.equal(result.valid, true, result.diagnostics.join("; "));
+  assert.deepEqual(result.activeCriteria.map((item) => item.id), ["core"]);
+  assert.deepEqual(result.historicalCriteria.map((item) => item.id), ["obsolete"]);
+
+  const invalidPublication = publicationComment("C57", planB, publicationA.id, [
+    transitions[0], { ...transitions[1], reason: "", authorizationEvidence: "" },
+  ], "2026-01-04T00:00:01Z", issueNumber);
+  const invalid = resolveCurrentPlan({ number: issueNumber, body: "", comments: [planA, publicationA, planB, invalidPublication] });
+  assert.equal(invalid.valid, false);
+  assert.ok(invalid.diagnostics.some((message) => message.includes("Cancellation transition is incomplete or unauthorized")));
+});
+
+test("v3 publication branches block selection; legacy transitions require explicit recovery; candidates stay pending", () => {
+  const issueNumber = 9;
+  const plan = v3PlanComment("C42", v2, "2026-01-01T00:00:00Z", issueNumber);
+  const first = publicationComment("C43", plan, null, [], "2026-01-02T00:00:00Z", issueNumber);
+  const branch = publicationComment("C44", plan, first.id, [], "2026-01-03T00:00:00Z", issueNumber);
+  const branch2 = publicationComment("C46", plan, first.id, [], "2026-01-03T00:00:01Z", issueNumber);
+  const branched = resolveCurrentPlan({ number: issueNumber, body: "", comments: [plan, first, branch, branch2] });
+  assert.equal(branched.valid, false);
+  assert.ok(branched.diagnostics.some((message) => /branch|tip/i.test(message)));
+
+  const legacy = comment("C45", v1, "2025-12-31T00:00:00Z", issueNumber);
+  const mixed = resolveCurrentPlan({ number: issueNumber, body: "", comments: [legacy, plan, first] });
+  assert.equal(mixed.valid, false);
+  assert.ok(mixed.diagnostics.some((message) => message.includes("Explicit legacy recovery")));
+
+  const oldItem = extractTaskItems(issueNumber, legacy.id, legacy.body)[0];
+  const recovery = {
+    planCommentId: legacy.id,
+    planDigestSha256: digestText(legacy.body),
+    authorizationEvidence: "Owner explicitly authorized this one-time legacy criteria reconciliation.",
+    mappings: [{
+      legacyItemId: oldItem.id,
+      status: "replaced",
+      replacementIds: ["core"],
+      authorizationEvidence: "Owner authorized mapping this legacy obligation to the named v3 criterion.",
+    }],
+  };
+  const recoveredPublication = publicationComment("C58", plan, null, [], "2026-01-02T00:00:02Z", issueNumber, recovery);
+  const recovered = resolveCurrentPlan({ number: issueNumber, body: "", comments: [legacy, plan, recoveredPublication] });
+  assert.equal(recovered.valid, true, recovered.diagnostics.join("; "));
+  assert.equal(recovered.plan.id, plan.id);
+  assert.equal(recovered.activeCriteria[0].id, "core");
+  assert.deepEqual(recovered.historicalCriteria.map((item) => item.id), [oldItem.id]);
+
+  const partial = resolveCurrentPlan({ number: issueNumber, body: "", comments: [plan] });
+  assert.equal(partial.valid, false);
+  assert.ok(partial.diagnostics.some((message) => message.includes("pending")));
 });
 
 test("valid receipt selects its exact plan and classifies accepted criteria", () => {

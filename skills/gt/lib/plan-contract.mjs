@@ -2,9 +2,12 @@ import { createHash } from "node:crypto";
 
 const PLAN_V1 = "<!-- gt:plan -->";
 const PLAN_V2 = "<!-- gt:plan v2 -->";
+const PLAN_V3 = "<!-- gt:plan v3 -->";
 const ACCEPTANCE_REQUIRED = "<!-- gt:acceptance-required v1 -->";
 const ACCEPTED = "<!-- gt:plan-accepted v1 -->";
+const PUBLISHED_V2 = "<!-- gt:plan-published v2 -->";
 const RECEIPT_SCHEMA = "gt-plan-acceptance/v1";
+const PUBLICATION_SCHEMA = "gt-plan-publication/v2";
 const V1_HEADINGS = [
   "## Goal",
   "## Scope",
@@ -28,7 +31,9 @@ const V2_HEADINGS = [
   "## Acceptance criteria",
   "## Risks and open questions",
 ];
+const V3_HEADINGS = V2_HEADINGS;
 const TASK_RE = /^(\s*[-*]\s+)\[([ xX])\]([ \t]+.*)?$/;
+const CRITERION_RE = /^\s*[-*]\s+\[([ xX])\]\s+\[criterion:([a-z0-9][a-z0-9._-]{0,63})\]\s+(.+?)\s*$/i;
 
 function sha256(value) {
   return createHash("sha256").update(value, "utf8").digest("hex");
@@ -152,6 +157,220 @@ function parseReceiptBody(body) {
   }
 }
 
+function parsePublicationBody(body) {
+  const lines = body.split(/\r?\n/);
+  if (lines[0] !== PUBLISHED_V2 || !/^```json\s*$/.test(lines[1] ?? "")) {
+    return { error: "Publication record marker or JSON fence is invalid" };
+  }
+  const end = lines.lastIndexOf("```");
+  if (end <= 2 || lines.slice(end + 1).some((line) => line.trim() !== "")) {
+    return { error: "Publication record JSON fence is missing or has trailing content" };
+  }
+  try {
+    const value = JSON.parse(lines.slice(2, end).join("\n"));
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? { value }
+      : { error: "Publication record JSON must be an object" };
+  } catch {
+    return { error: "Publication record JSON is invalid" };
+  }
+}
+
+function extractDeclaredCriteria(plan) {
+  const lines = plan.body.replace(/\r\n/g, "\n").split("\n");
+  const headings = sectionsOf(plan.body);
+  const index = headings.findIndex(({ heading }) => heading === "## Acceptance criteria");
+  if (index < 0) return [];
+  const content = contentForHeading(plan.body, headings, index);
+  const criteria = [];
+  walkLines(content, ({ line, fenced }) => {
+    if (fenced || !line.trim()) return;
+    const match = line.match(CRITERION_RE);
+    if (!match) return;
+    const id = match[2].toLowerCase();
+    const text = match[3].trim();
+    criteria.push({
+      id,
+      text,
+      checked: match[1].toLowerCase() === "x",
+      digestSha256: sha256(text),
+      line: lines.findIndex((candidate) => candidate === line) + 1,
+    });
+  });
+  return criteria;
+}
+
+function validatePublicationRecord(record, comment, issue, byId) {
+  const errors = [];
+  if (record.schema !== PUBLICATION_SCHEMA) errors.push("Unknown publication schema");
+  if (record.issueNumber !== issue.number) errors.push("Publication issue number mismatch");
+  if (typeof record.planCommentId !== "string" || typeof record.planUrl !== "string"
+    || typeof record.planDigestSha256 !== "string" || !/^[a-f0-9]{64}$/.test(record.planDigestSha256)) {
+    errors.push("Publication must identify the plan comment and its SHA-256 digest");
+  }
+  if (!(record.previousPublicationCommentId === null || typeof record.previousPublicationCommentId === "string")) {
+    errors.push("Invalid previous publication reference");
+  }
+  const plan = byId.get(record.planCommentId);
+  if (!plan || plan.url !== record.planUrl || !asIssueCommentUrl(plan.url, issue.number)) {
+    errors.push("Referenced plan comment ID/URL does not match this issue");
+  } else {
+    const parsed = parsePlanComment(plan);
+    if (!parsed.valid || parsed.version !== 3 || !parsed.requiresPublication) {
+      errors.push("Publication must reference a valid v3 plan");
+    }
+    if (record.planDigestSha256 !== digestText(plan.body)) errors.push("Plan digest mismatch");
+  }
+  if (!comment.createdAt || !sameIssueUrl(comment.url, plan?.url, issue.number)) {
+    errors.push("Publication and plan URLs must identify comments on the same issue");
+  }
+  if (plan?.createdAt && comment.createdAt && plan.createdAt > comment.createdAt) {
+    errors.push("Published plan was created after its publication record");
+  }
+  if (!Array.isArray(record.criteria) || !Array.isArray(record.transitions)) {
+    errors.push("Publication criteria and transitions must be arrays");
+  }
+  const declared = plan ? extractDeclaredCriteria(plan) : [];
+  if (Array.isArray(record.criteria)) {
+    const ids = new Set();
+    for (const item of record.criteria) {
+      if (!item || typeof item.id !== "string" || !/^[a-z0-9][a-z0-9._-]{0,63}$/i.test(item.id)
+        || typeof item.text !== "string" || !item.text.trim()
+        || typeof item.digestSha256 !== "string" || !/^[a-f0-9]{64}$/.test(item.digestSha256)) {
+        errors.push("Invalid published criterion record");
+        continue;
+      }
+      if (ids.has(item.id.toLowerCase())) errors.push(`Duplicate published criterion ID: ${item.id}`);
+      ids.add(item.id.toLowerCase());
+      const source = declared.find((criterion) => criterion.id === item.id.toLowerCase());
+      if (!source || source.text !== item.text || source.digestSha256 !== item.digestSha256) {
+        errors.push(`Published criterion does not match the exact plan content: ${item.id}`);
+      }
+    }
+    if (declared.length !== record.criteria.length) errors.push("Publication criterion inventory is incomplete");
+  }
+  if (!byId.has(comment.id)) errors.push("Publication record is not in this issue snapshot");
+  return errors;
+}
+
+function validateLegacyRecovery(recovery, legacyResult, plan, record) {
+  const errors = [];
+  if (!recovery || typeof recovery !== "object" || recovery.planCommentId !== legacyResult.plan?.id
+    || recovery.planDigestSha256 !== digestText(legacyResult.plan?.body ?? "")
+    || typeof recovery.authorizationEvidence !== "string" || !recovery.authorizationEvidence.trim()
+    || !Array.isArray(recovery.mappings)) {
+    return { errors: ["Explicit legacy recovery must identify the current legacy plan, its digest, authorization evidence, and mappings"], criteria: [], historicalCriteria: [] };
+  }
+  const declared = new Map(record.criteria.map((item) => [item.id.toLowerCase(), item]));
+  const active = new Map(legacyResult.activeCriteria.map((item) => [item.id, item]));
+  const mappings = new Map();
+  const usedTargets = new Set();
+  const historicalCriteria = [];
+  for (const mapping of recovery.mappings) {
+    if (!mapping || typeof mapping.legacyItemId !== "string" || !active.has(mapping.legacyItemId)
+      || mappings.has(mapping.legacyItemId)) {
+      errors.push("Legacy recovery mapping references an unknown or duplicate active criterion");
+      continue;
+    }
+    mappings.set(mapping.legacyItemId, mapping);
+    const old = active.get(mapping.legacyItemId);
+    if (mapping.status === "retained") {
+      const targetId = String(mapping.criterionId ?? "").toLowerCase();
+      const target = declared.get(targetId);
+      if (!target || target.text !== old.text || usedTargets.has(targetId)) {
+        errors.push(`Retained legacy criterion does not map to a unique exact v3 criterion: ${mapping.legacyItemId}`);
+      } else usedTargets.add(targetId);
+    } else if (mapping.status === "replaced") {
+      const targets = Array.isArray(mapping.replacementIds) ? mapping.replacementIds.map((id) => String(id).toLowerCase()) : [];
+      if (!targets.length || targets.some((id) => !declared.has(id))
+        || new Set(targets).size !== targets.length || targets.some((id) => usedTargets.has(id))
+        || typeof mapping.authorizationEvidence !== "string" || !mapping.authorizationEvidence.trim()) {
+        errors.push(`Legacy replacement requires declared successor criteria and explicit authorization: ${mapping.legacyItemId}`);
+      }
+      for (const id of targets) usedTargets.add(id);
+      historicalCriteria.push({ ...old, document: old.document });
+    } else if (mapping.status === "cancelled") {
+      if (typeof mapping.reason !== "string" || !mapping.reason.trim()
+        || typeof mapping.authorizationEvidence !== "string" || !mapping.authorizationEvidence.trim()) {
+        errors.push(`Legacy cancellation requires a reason and explicit authorization: ${mapping.legacyItemId}`);
+      }
+      historicalCriteria.push({ ...old, document: old.document });
+    } else errors.push(`Unknown legacy recovery disposition: ${mapping.legacyItemId}`);
+  }
+  for (const id of active.keys()) if (!mappings.has(id)) errors.push(`Legacy active criterion is unmapped: ${id}`);
+  const declaredCriteria = extractDeclaredCriteria(plan);
+  const criteria = declaredCriteria.map((criterion) => {
+    const retained = recovery.mappings.find((mapping) => mapping.status === "retained"
+      && String(mapping.criterionId).toLowerCase() === criterion.id);
+    const prior = retained ? active.get(retained.legacyItemId) : null;
+    return { ...criterion, checked: prior ? prior.checked : false };
+  });
+  return { errors, criteria, historicalCriteria };
+}
+
+function validatePublicationTransitions(previousRecord, previousPlan, record, plan, recordComment) {
+  const errors = [];
+  const historicalCriteria = [];
+  const oldCriteria = new Map(previousRecord.criteria.map((item) => [item.id.toLowerCase(), item]));
+  const newCriteria = new Map(record.criteria.map((item) => [item.id.toLowerCase(), item]));
+  const transitions = new Map();
+  const usedSuccessors = new Set();
+  for (const transition of record.transitions) {
+    const id = transition?.id?.toLowerCase();
+    if (!id || !oldCriteria.has(id) || transitions.has(id)) {
+      errors.push("Publication transition references an unknown or duplicate prior criterion");
+      continue;
+    }
+    transitions.set(id, transition);
+  }
+  for (const [id, old] of oldCriteria) {
+    const transition = transitions.get(id);
+    const next = newCriteria.get(id);
+    if (!transition) {
+      errors.push(`Prior active criterion has no publication transition: ${id}`);
+      continue;
+    }
+    if (transition.status === "retained") {
+      if (!next || next.text !== old.text || next.digestSha256 !== old.digestSha256) {
+        errors.push(`Retained criterion changed or is absent: ${id}`);
+      }
+    } else if (transition.status === "replaced") {
+      if (next || !Array.isArray(transition.replacementIds) || !transition.replacementIds.length
+        || transition.replacementIds.some((replacementId) => !newCriteria.has(String(replacementId).toLowerCase()))
+        || new Set((transition.replacementIds ?? []).map((replacementId) => String(replacementId).toLowerCase())).size !== (transition.replacementIds ?? []).length
+        || (transition.replacementIds ?? []).some((replacementId) => usedSuccessors.has(String(replacementId).toLowerCase()))
+        || typeof transition.authorizationEvidence !== "string" || !transition.authorizationEvidence.trim()) {
+        errors.push(`Replacement transition is incomplete or unauthorized: ${id}`);
+      }
+      for (const replacementId of transition.replacementIds ?? []) usedSuccessors.add(String(replacementId).toLowerCase());
+      if (next === undefined) {
+        const prior = extractDeclaredCriteria(previousPlan).find((criterion) => criterion.id === id);
+        if (prior) historicalCriteria.push({ ...prior, document: previousPlan.id });
+      }
+    } else if (transition.status === "cancelled") {
+      if (next || typeof transition.reason !== "string" || !transition.reason.trim()
+        || typeof transition.authorizationEvidence !== "string" || !transition.authorizationEvidence.trim()) {
+        errors.push(`Cancellation transition is incomplete or unauthorized: ${id}`);
+      }
+      const prior = extractDeclaredCriteria(previousPlan).find((criterion) => criterion.id === id);
+      if (prior) historicalCriteria.push({ ...prior, document: previousPlan.id });
+    } else errors.push(`Unknown publication transition status: ${id}`);
+  }
+  for (const id of transitions.keys()) {
+    if (!oldCriteria.has(id)) errors.push(`Transition is not for a prior active criterion: ${id}`);
+  }
+  // A retained criterion keeps its previously evidenced checkbox state; new/replacement criteria
+  // start with the state written in the candidate (normally unchecked).
+  const oldStatuses = new Map(extractDeclaredCriteria(previousPlan).map((item) => [item.id, item.checked]));
+  const current = extractDeclaredCriteria(plan).map((item) => ({
+    ...item,
+    checked: oldStatuses.has(item.id) && oldCriteria.has(item.id) && transitions.get(item.id)?.status === "retained"
+      ? oldStatuses.get(item.id)
+      : item.checked,
+  }));
+  return { errors, criteria: current, historicalCriteria, recordComment };
+}
+
 /** Parse and structurally validate one GitHub plan comment. */
 export function parsePlanComment(comment) {
   const body = typeof comment === "string" ? comment : comment?.body;
@@ -160,7 +379,7 @@ export function parsePlanComment(comment) {
   }
   const lines = body.replace(/\r\n/g, "\n").split("\n");
   const marker = lines[0];
-  const version = marker === PLAN_V1 ? 1 : marker === PLAN_V2 ? 2 : null;
+  const version = marker === PLAN_V1 ? 1 : marker === PLAN_V2 ? 2 : marker === PLAN_V3 ? 3 : null;
   const diagnostics = [];
   if (version === null) {
     return { valid: false, version: null, diagnostics: ["Unrecognized exact plan marker on first line"] };
@@ -172,7 +391,7 @@ export function parsePlanComment(comment) {
     diagnostics.push("Unknown or unsupported acceptance marker on second line");
   }
   const requiresAcceptance = version === 2 && secondLine === ACCEPTANCE_REQUIRED;
-  const expected = version === 1 ? V1_HEADINGS : V2_HEADINGS;
+  const expected = version === 1 ? V1_HEADINGS : version === 2 ? V2_HEADINGS : V3_HEADINGS;
   const headings = sectionsOf(body);
   const planHeadings = headings.filter(({ heading }) => expected.includes(heading));
   const actual = planHeadings.map(({ heading }) => heading);
@@ -198,14 +417,33 @@ export function parsePlanComment(comment) {
     if (!fenced && !testCommand) testCommand = line.match(/^Test command:\s*(.*?)\s*$/)?.[1] ?? "";
   });
   if (!testCommand) diagnostics.push("Tests section must contain a non-empty Test command line");
-  if (version === 2 && !headings.some(({ heading }) => heading === "## Constraints")) {
+  if (version >= 2 && !headings.some(({ heading }) => heading === "## Constraints")) {
     diagnostics.push("V2 plan must include Constraints");
+  }
+
+  if (version === 3) {
+    const criteriaHeading = headings.findIndex(({ heading }) => heading === "## Acceptance criteria");
+    const criteriaBody = criteriaHeading < 0 ? "" : contentForHeading(body, headings, criteriaHeading);
+    const ids = new Set();
+    walkLines(criteriaBody, ({ line, fenced }) => {
+      if (fenced || !line.trim()) return;
+      const task = line.match(CRITERION_RE);
+      if (!task) {
+        diagnostics.push("V3 acceptance criteria must use explicit [criterion:<id>] task items");
+        return;
+      }
+      const id = task[2].toLowerCase();
+      if (ids.has(id)) diagnostics.push(`V3 criterion ID is duplicated: ${id}`);
+      ids.add(id);
+    });
+    if (ids.size === 0) diagnostics.push("V3 plan must declare at least one explicit acceptance criterion");
   }
 
   return {
     valid: diagnostics.length === 0,
     version,
     requiresAcceptance,
+    requiresPublication: version === 3,
     testCommand,
     diagnostics,
   };
@@ -428,6 +666,106 @@ export function resolveCurrentPlan(issue) {
   }
   const docs = documentsFor(issue);
   const byId = new Map(issue.comments.map((comment) => [comment.id, comment]));
+  const publicationMarkers = issue.comments.filter((comment) => comment.body.split(/\r?\n/, 1)[0].startsWith("<!-- gt:plan-published"));
+  if (publicationMarkers.length) {
+    const publicationComments = publicationMarkers.filter((comment) => comment.body.split(/\r?\n/, 1)[0] === PUBLISHED_V2);
+    const diagnostics = [];
+    if (publicationComments.length !== publicationMarkers.length) {
+      return { valid: false, plan: null, diagnostics: ["Malformed or unknown publication record marker"], activeCriteria: [] };
+    }
+    const hasLegacyHistory = issue.comments.some((comment) => comment.body.startsWith(PLAN_V1)
+      || comment.body.startsWith(PLAN_V2) || comment.body.split(/\r?\n/, 1)[0] === ACCEPTED);
+    const records = new Map();
+    for (const comment of publicationComments) {
+      const parsed = parsePublicationBody(comment.body);
+      if (parsed.error) diagnostics.push(`${comment.id}: ${parsed.error}`);
+      else {
+        const errors = validatePublicationRecord(parsed.value, comment, issue, byId);
+        if (errors.length) diagnostics.push(...errors.map((error) => `${comment.id}: ${error}`));
+        records.set(comment.id, parsed.value);
+      }
+    }
+    if (diagnostics.length || records.size !== publicationComments.length) {
+      return { valid: false, plan: null, diagnostics, activeCriteria: [] };
+    }
+    const children = new Map();
+    let roots = 0;
+    for (const [id, record] of records) {
+      const previous = record.previousPublicationCommentId;
+      if (previous === null) roots += 1;
+      else if (!records.has(previous)) diagnostics.push(`${id}: Previous publication record is missing`);
+      else children.set(previous, (children.get(previous) ?? 0) + 1);
+    }
+    if (roots !== 1) diagnostics.push("Publication history must have exactly one chain root");
+    for (const [id, count] of children) if (count > 1) diagnostics.push(`${id}: Conflicting publication branches`);
+    const tips = [...records.keys()].filter((id) => !children.has(id));
+    if (tips.length !== 1) diagnostics.push("Publication history must have exactly one chain tip");
+    if (diagnostics.length) return { valid: false, plan: null, diagnostics, activeCriteria: [] };
+    const tipId = tips[0];
+    const chain = [];
+    let currentId = tipId;
+    while (currentId) {
+      chain.unshift(byId.get(currentId));
+      currentId = records.get(currentId).previousPublicationCommentId;
+    }
+    if (chain.length !== records.size) {
+      return { valid: false, plan: null, diagnostics: ["Publication history contains a disconnected or cyclic branch"], activeCriteria: [] };
+    }
+    let resolvedCriteria = [];
+    const historicalCriteria = [];
+    let previousPlan = null;
+    let previousRecord = null;
+    for (const recordComment of chain) {
+      const record = records.get(recordComment.id);
+      const plan = byId.get(record.planCommentId);
+      if (previousRecord) {
+        const transition = validatePublicationTransitions(previousRecord, previousPlan, record, plan, recordComment);
+        diagnostics.push(...transition.errors.map((error) => `${recordComment.id}: ${error}`));
+        resolvedCriteria = transition.criteria;
+        historicalCriteria.push(...transition.historicalCriteria);
+      } else resolvedCriteria = extractDeclaredCriteria(plan);
+      previousRecord = record;
+      previousPlan = plan;
+    }
+    if (hasLegacyHistory && chain.length) {
+      const legacyComments = issue.comments.filter((comment) => !comment.body.startsWith(PLAN_V3)
+        && comment.body.split(/\r?\n/, 1)[0] !== PUBLISHED_V2);
+      const legacyResult = resolveCurrentPlan({ ...issue, comments: legacyComments });
+      const rootRecord = records.get(chain[0].id);
+      const rootPlan = byId.get(rootRecord.planCommentId);
+      const recovery = validateLegacyRecovery(rootRecord.legacyRecovery, legacyResult, rootPlan, rootRecord);
+      diagnostics.push(...recovery.errors.map((error) => `${chain[0].id}: ${error}`));
+      if (!recovery.errors.length) {
+        resolvedCriteria = recovery.criteria;
+        historicalCriteria.push(...recovery.historicalCriteria);
+      }
+    }
+    if (diagnostics.length) return { valid: false, plan: null, diagnostics, activeCriteria: [] };
+    const plan = byId.get(previousRecord.planCommentId);
+    const activeCriteria = resolvedCriteria.map((item) => ({
+      id: item.id,
+      document: plan.id,
+      line: item.line,
+      text: item.text,
+      sourceDigestSha256: digestText(plan.body),
+      checked: item.checked,
+    }));
+    return {
+      valid: true,
+      plan,
+      publication: byId.get(tipId),
+      diagnostics,
+      activeCriteria,
+      historicalCriteria: historicalCriteria.map((item) => ({
+        id: item.id,
+        document: item.document,
+        line: item.line,
+        text: item.text,
+        sourceDigestSha256: digestText(byId.get(item.document).body),
+        checked: item.checked,
+      })),
+    };
+  }
   const receiptCandidates = issue.comments.filter((comment) => comment.body.split(/\r?\n/, 1)[0].startsWith("<!-- gt:plan-accepted"));
   const receiptComments = receiptCandidates.filter((comment) => comment.body.split(/\r?\n/, 1)[0] === ACCEPTED);
   if (receiptCandidates.length !== receiptComments.length) {
@@ -497,8 +835,8 @@ export function resolveCurrentPlan(issue) {
       if (receiptComments.some((receipt) => receipt.id === candidate.id)) return false;
       if (acceptedPlanIds.has(candidate.id)) return false;
       const parsed = parsePlanComment(candidate);
-      return candidate.body.startsWith(PLAN_V1) || candidate.body.startsWith(PLAN_V2)
-        ? !parsed.valid || parsed.requiresAcceptance
+      return candidate.body.startsWith(PLAN_V1) || candidate.body.startsWith(PLAN_V2) || candidate.body.startsWith(PLAN_V3)
+        ? !parsed.valid || parsed.requiresAcceptance || parsed.requiresPublication
         : false;
     }).map((candidate) => `${candidate.id}: pending or invalid plan candidate; accepted plan remains unchanged`));
     const historicalCriteria = tipReceipt.items.filter((item) => !activeIds.has(item.id));
@@ -513,20 +851,26 @@ export function resolveCurrentPlan(issue) {
   }
 
   const plans = issue.comments
-    .filter((comment) => comment.body.startsWith(PLAN_V1) || comment.body.startsWith(PLAN_V2))
+    .filter((comment) => comment.body.startsWith(PLAN_V1) || comment.body.startsWith(PLAN_V2) || comment.body.startsWith(PLAN_V3))
     .map((comment) => ({ comment, parsed: parsePlanComment(comment) }));
   for (const { comment, parsed } of plans) {
     if (!parsed.valid) diagnostics.push(`${comment.id}: invalid legacy plan: ${parsed.diagnostics.join("; ")}`);
     else if (parsed.requiresAcceptance) diagnostics.push(`${comment.id}: acceptance-required plan is pending without a receipt`);
+    else if (parsed.requiresPublication) diagnostics.push(`${comment.id}: v3 plan is pending without a publication record`);
   }
-  const eligible = plans.filter(({ parsed }) => parsed.valid && !parsed.requiresAcceptance);
+  const eligible = plans.filter(({ parsed }) => parsed.valid && !parsed.requiresAcceptance && !parsed.requiresPublication);
   eligible.sort((a, b) => (a.comment.createdAt ?? "").localeCompare(b.comment.createdAt ?? "") || a.comment.id.localeCompare(b.comment.id));
   if (!eligible.length) {
     return { valid: false, plan: null, diagnostics: [...diagnostics, "No valid eligible plan exists"], activeCriteria: [] };
   }
   const selected = eligible.at(-1).comment;
   const activeCriteria = [];
-  for (const [document, text] of docs) activeCriteria.push(...inventoryDocument(issue.number, document, text));
+  const pendingPlanIds = new Set(plans.filter(({ parsed }) => parsed.valid
+    && (parsed.requiresAcceptance || parsed.requiresPublication)).map(({ comment }) => comment.id));
+  for (const [document, text] of docs) {
+    if (pendingPlanIds.has(document)) continue;
+    activeCriteria.push(...inventoryDocument(issue.number, document, text));
+  }
   return {
     valid: true,
     plan: selected,

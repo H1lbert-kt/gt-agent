@@ -18,6 +18,24 @@
     "expected": "Report the exact partial state; do not accept the candidate, roll back, or retry blindly."
   },
   {
+    "id": "v3-pending-candidate",
+    "kind": "agent-evaluation-only",
+    "input": "A valid v3 plan has explicit criterion IDs but no valid publication record; the issue also contains incidental checklists.",
+    "expected": "Keep the previous plan and active criteria; treat the v3 candidate and incidental checklists as non-active."
+  },
+  {
+    "id": "v3-partial-publication-recovery",
+    "kind": "agent-evaluation-only",
+    "input": "The candidate and planned label were written but publication record verification failed.",
+    "expected": "Reread issue state, preserve the last valid plan, and wait for an explicitly authorized recovery; never infer approval or retry stale content."
+  },
+  {
+    "id": "v3-legacy-boundary",
+    "kind": "agent-evaluation-only",
+    "input": "A v3 publication appears on an issue with existing v1/v2 plan or acceptance-receipt history.",
+    "expected": "Do not silently supersede or migrate legacy history; require an explicit root legacyRecovery mapping of every active item and specific authorization for replacement/cancellation."
+  },
+  {
     "id": "contextual-unique-target",
     "kind": "agent-evaluation-only",
     "input": "The active conversation discusses one issue; the user says, 'continue with that issue'.",

@@ -102,9 +102,11 @@ test("operations table preserves effects and reference contracts without mode ow
 test("plan reference retains grounded stages, safe dependencies, and controlled comment edits", () => {
   assert.match(plan, /^## Plan N \/ plan all \/ replan N/m);
   assert.match(plan, /Only plan\/replan add `planned`/);
-  assert.match(plan, /```markdown\n<!-- gt:plan v2 -->\n<!-- gt:acceptance-required v1 -->\n## Goal/);
+  assert.match(plan, /```markdown\n<!-- gt:plan v3 -->\n## Goal/);
+  assert.match(plan, /\[criterion:<stable-id>\]/);
   assert.match(plan, /resolve the verified current plan and active criteria/);
-  assert.match(plan, /append a NEW `<!-- gt:plan-accepted v1 -->` JSON receipt/);
+  assert.match(plan, /append a NEW `<!-- gt:plan-published v2 -->` record/);
+  assert.match(shared, /not human approval, authorship, signature, or authorization/);
   assert.match(plan, /Discussion\/drafting\/review alone is read-only/);
   assert.match(plan, /Kickoff is a read-only survey\/proposal/);
   assert.match(plan, /implementation requires a separate requested operation under `execution\.md`/);
@@ -221,8 +223,8 @@ test("skill and docs clarify explicit targets and narrow checkbox authorization"
   assert.match(guide, /optimistic check is not an atomic-write guarantee/i);
   assert.match(guide, /unrelated suite test fails/i);
   assert.match(guide, /`@gt commit 42`/);
-  for (const literal of ["Legacy only", "Pending candidate", "Receipt/digest", "Criteria",
-    "Comment edits", "Trust boundary", "requires a new accepted revision"]) {
+  for (const literal of ["Legacy:", "Pending candidate", "Publication and digest", "Stable criteria",
+    "Recovery:", "Trust boundary"]) {
     assert.ok(guide.includes(literal), `missing replan scenario: ${literal}`);
   }
 });
