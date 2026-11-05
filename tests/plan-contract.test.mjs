@@ -260,10 +260,15 @@ test("resolves explicit stage targets without fallback and omitted targets by is
 
 test("adversarial scenario fixtures are inert and explicitly agent-evaluation-only", () => {
   const scenarios = JSON.parse(fixture("agent-scenarios.json"));
-  assert.equal(scenarios.length, 3);
+  assert.ok(scenarios.length >= 3);
   for (const scenario of scenarios) {
     assert.equal(scenario.kind, "agent-evaluation-only");
     assert.equal(typeof scenario.expected, "string");
+  }
+  for (const id of ["contextual-unique-target", "contextual-ambiguous-target",
+    "contextual-invalid-target", "bare-gt-help", "compound-explicit-effects",
+    "compound-dependent-failure"]) {
+    assert.ok(scenarios.some((scenario) => scenario.id === id), `missing agent scenario ${id}`);
   }
   const moduleSource = readFileSync(join(root, "../../../skills/gt/lib/plan-contract.mjs"), "utf8");
   assert.match(moduleSource, /from "node:crypto"/);
