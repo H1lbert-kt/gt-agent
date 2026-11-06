@@ -31,7 +31,13 @@ const V2_HEADINGS = [
   "## Acceptance criteria",
   "## Risks and open questions",
 ];
-const V3_HEADINGS = V2_HEADINGS;
+const V3_SEMANTIC_HEADINGS = {
+  goal: new Set(["goal", "objective", "purpose", "desired outcome"]),
+  scope: new Set(["scope", "boundaries", "included and excluded"]),
+  implementation: new Set(["implementation", "implementation steps", "execution plan", "steps"]),
+  validation: new Set(["tests", "validation", "verification"]),
+  acceptance: new Set(["acceptance criteria"]),
+};
 const TASK_RE = /^(\s*[-*]\s+)\[([ xX])\]([ \t]+.*)?$/;
 const CRITERION_RE = /^\s*[-*]\s+\[([ xX])\]\s+\[criterion:([a-z0-9][a-z0-9._-]{0,63})\]\s+(.+?)\s*$/i;
 
@@ -391,33 +397,48 @@ export function parsePlanComment(comment) {
     diagnostics.push("Unknown or unsupported acceptance marker on second line");
   }
   const requiresAcceptance = version === 2 && secondLine === ACCEPTANCE_REQUIRED;
-  const expected = version === 1 ? V1_HEADINGS : version === 2 ? V2_HEADINGS : V3_HEADINGS;
+  const expected = version === 1 ? V1_HEADINGS : V2_HEADINGS;
   const headings = sectionsOf(body);
-  const planHeadings = headings.filter(({ heading }) => expected.includes(heading));
-  const actual = planHeadings.map(({ heading }) => heading);
-  if (actual.length !== expected.length || actual.some((heading, index) => heading !== expected[index])) {
-    diagnostics.push("Required headings are missing, duplicated, reordered, or ambiguous");
-  }
-  if (headings.some(({ heading }) => {
-    const level = heading.match(/^#+/)[0].length;
-    return level <= 3 && !expected.includes(heading);
-  })) diagnostics.push("Plan contains unexpected structural headings");
+  if (version < 3) {
+    const planHeadings = headings.filter(({ heading }) => expected.includes(heading));
+    const actual = planHeadings.map(({ heading }) => heading);
+    if (actual.length !== expected.length || actual.some((heading, index) => heading !== expected[index])) {
+      diagnostics.push("Required headings are missing, duplicated, reordered, or ambiguous");
+    }
+    if (headings.some(({ heading }) => {
+      const level = heading.match(/^#+/)[0].length;
+      return level <= 3 && !expected.includes(heading);
+    })) diagnostics.push("Plan contains unexpected structural headings");
 
-  for (let i = 0; i < expected.length; i += 1) {
-    const matches = headings.filter(({ heading }) => heading === expected[i]);
-    if (matches.length !== 1) continue;
-    const content = contentForHeading(body, headings, headings.indexOf(matches[0]));
-    if (!usefulContent(content)) diagnostics.push(`Required section has empty or placeholder content: ${expected[i]}`);
+    for (let i = 0; i < expected.length; i += 1) {
+      const matches = headings.filter(({ heading }) => heading === expected[i]);
+      if (matches.length !== 1) continue;
+      const content = contentForHeading(body, headings, headings.indexOf(matches[0]));
+      if (!usefulContent(content)) diagnostics.push(`Required section has empty or placeholder content: ${expected[i]}`);
+    }
+  } else {
+    const levelTwo = headings.filter(({ heading }) => heading.startsWith("## "));
+    for (const [semantic, aliases] of Object.entries(V3_SEMANTIC_HEADINGS)) {
+      const matches = levelTwo.filter(({ heading }) => aliases.has(heading.slice(3).trim().toLowerCase()));
+      if (matches.length !== 1) {
+        diagnostics.push(`V3 plan must contain exactly one unambiguous ${semantic} section`);
+        continue;
+      }
+      const content = contentForHeading(body, headings, headings.indexOf(matches[0]));
+      if (!usefulContent(content)) diagnostics.push(`V3 ${semantic} section has empty or placeholder content`);
+    }
   }
 
-  const testsHeading = headings.findIndex(({ heading }) => heading === "## Tests");
+  const testsHeading = headings.findIndex(({ heading }) => version === 3
+    ? heading.startsWith("## ") && V3_SEMANTIC_HEADINGS.validation.has(heading.slice(3).trim().toLowerCase())
+    : heading === "## Tests");
   const testsContent = testsHeading < 0 ? "" : contentForHeading(body, headings, testsHeading);
   let testCommand = "";
   walkLines(testsContent, ({ line, fenced }) => {
     if (!fenced && !testCommand) testCommand = line.match(/^Test command:\s*(.*?)\s*$/)?.[1] ?? "";
   });
   if (!testCommand) diagnostics.push("Tests section must contain a non-empty Test command line");
-  if (version >= 2 && !headings.some(({ heading }) => heading === "## Constraints")) {
+  if (version === 2 && !headings.some(({ heading }) => heading === "## Constraints")) {
     diagnostics.push("V2 plan must include Constraints");
   }
 
@@ -427,6 +448,7 @@ export function parsePlanComment(comment) {
     const ids = new Set();
     walkLines(criteriaBody, ({ line, fenced }) => {
       if (fenced || !line.trim()) return;
+      if (!TASK_RE.test(line) && (/^\s{0,3}#{1,6}\s+/.test(line) || !/^\s*[-*]\s+\[/.test(line))) return;
       const task = line.match(CRITERION_RE);
       if (!task) {
         diagnostics.push("V3 acceptance criteria must use explicit [criterion:<id>] task items");

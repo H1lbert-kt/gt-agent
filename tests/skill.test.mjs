@@ -130,7 +130,7 @@ test("operations table preserves effects and reference contracts without mode ow
 test("plan reference retains grounded stages, safe dependencies, and controlled comment edits", () => {
   assert.match(plan, /^## Plan N \/ plan all \/ replan N/m);
   assert.match(plan, /Only plan\/replan add `planned`/);
-  assert.match(plan, /```markdown\n<!-- gt:plan v3 -->\n## Goal/);
+  assert.match(plan, /```markdown\n<!-- gt:plan v3 -->\n## Objective/);
   assert.match(plan, /\[criterion:<stable-id>\]/);
   assert.match(plan, /resolve the verified current plan and active criteria/);
   assert.match(plan, /append a NEW `<!-- gt:plan-published v2 -->` record/);
@@ -142,7 +142,11 @@ test("plan reference retains grounded stages, safe dependencies, and controlled 
   assert.match(plan, /Ask independent frontier questions together/);
   assert.match(plan, /one issue per coherent deliverable/);
   assert.match(plan, /single explicit request to create issue\(s\) and publish the associated plan authorizes those constituent planning writes/);
-  assert.match(plan, /Scale the amount of analysis and prose to complexity, uncertainty, and impact/);
+  assert.match(plan, /Scale analysis and prose to complexity, uncertainty, and impact/);
+  assert.match(plan, /V3 plans do not require one exact template or heading order/);
+  assert.match(plan, /complete plan can add `## Diagnostic evidence`/);
+  assert.match(readme, /Plans are proportional to risk/);
+  assert.match(guide, /concise objective\/scope\/implementation\/validation\/acceptance content/);
   assert.match(plan, /Do not pause for redundant confirmation between these steps/);
   assert.match(plan, /does not authorize implementation, commit, push, or closure/);
   assert.match(plan, /implementation requires a separate requested operation under `execution\.md`/);

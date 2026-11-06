@@ -111,6 +111,40 @@ test("rejects reordered, incomplete, duplicated, and empty test sections", () =>
   assert.equal(parsePlanComment(v2.replace("## Goal", "## Goal\n\n## Goal")).valid, false);
 });
 
+test("v3 accepts concise and complete semantic formats independent of order", () => {
+  const concise = parsePlanComment(fixture("plan-v3-concise.md"));
+  const complete = parsePlanComment(fixture("plan-v3-complete.md"));
+  assert.equal(concise.valid, true, concise.diagnostics.join("; "));
+  assert.equal(complete.valid, true, complete.diagnostics.join("; "));
+  assert.equal(concise.version, 3);
+  assert.equal(complete.version, 3);
+
+  const withExtraSubsections = fixture("plan-v3-concise.md")
+    .replace("## Boundaries", "## Notes\nOptional context.\n### Further detail\nNested content.\n## Boundaries")
+    .replace("## Steps", "## Scope\nA second, ambiguous scope section.\n## Steps");
+  assert.equal(parsePlanComment(withExtraSubsections).valid, false);
+  assert.match(parsePlanComment(withExtraSubsections).diagnostics.join(" "), /exactly one unambiguous scope/);
+});
+
+test("v3 still requires unambiguous semantic sections, a test command, and explicit criterion tasks", () => {
+  const concise = fixture("plan-v3-concise.md");
+  const missingGoal = parsePlanComment(concise.replace("## Objective", "## Context"));
+  assert.equal(missingGoal.valid, false);
+  assert.match(missingGoal.diagnostics.join(" "), /unambiguous goal section/);
+
+  const emptyScope = parsePlanComment(concise.replace("Only the local parser and its fixtures.", "TODO"));
+  assert.equal(emptyScope.valid, false);
+  assert.match(emptyScope.diagnostics.join(" "), /scope section has empty or placeholder content/);
+
+  const emptyCommand = parsePlanComment(concise.replace("Test command: node --test tests/", "Test command:"));
+  assert.equal(emptyCommand.valid, false);
+  assert.match(emptyCommand.diagnostics.join(" "), /non-empty Test command/);
+
+  const invalidCriterion = parsePlanComment(concise.replace("[criterion:concise-parser] ", ""));
+  assert.equal(invalidCriterion.valid, false);
+  assert.match(invalidCriterion.diagnostics.join(" "), /explicit \[criterion:<id>\]/);
+});
+
 test("canonical digest normalizes only real task states outside fenced code", () => {
   const unchecked = "Heading\r\n- [ ] real task\r\n* [x] second\r\ntext [x] stays\r\n```md\r\n- [ ] fenced task\r\n```\r\n";
   const checked = unchecked.replace("- [ ] real task", "- [X] real task").replace("* [x] second", "* [ ] second");

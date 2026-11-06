@@ -51,35 +51,48 @@ Plan N requires the explicitly numbered open `stage` issue without `planned`; an
 
 ### Plan depth
 
-Scale the amount of analysis and prose to complexity, uncertainty, and impact. For clear, low-risk work, keep Goal, Scope, Technical approach, Implementation steps, Risks, and criteria concise; state “none identified” or “not applicable” rather than inventing detail. For high-risk, cross-cutting, externally visible, or materially ambiguous work, investigate and document alternatives, sequencing, migration/rollback concerns, and unresolved decisions as relevant. Preserve the exact required headings/order, a useful non-empty test command, and explicit stable-ID acceptance criteria in every v3 candidate: proportional planning shortens section content, not the integrity contract. Detail only the next implementation slice when later work depends on its findings; describe later slices as outcomes rather than speculative file-level plans. Avoid repeated repository reads by reusing context as above while refreshing mutable state before writes.
+Scale analysis and prose to complexity, uncertainty, and impact. A concise plan for clear, low-risk work states the objective, scope, implementation, validation, and criteria without ceremonial sections. A complete plan adds evidence/diagnosis, included and excluded scope, constraints, technical decisions, sequencing, and risks when they help decisions. Do not add empty sections or invent detail. Describe only the next implementation slice when later work depends on its findings; state later slices as outcomes rather than speculative file-level plans. Avoid repeated repository reads by reusing context while refreshing mutable state before writes.
 
 Dry-run performs the repository analysis needed for the decision and reads the selected issues, then prints proposed plans without writes. Otherwise append each plan as a NEW comment using `gh issue comment <N> --body-file -`. Never rewrite descriptions. Prior comments are append-only by default; an explicit request to overwrite a specific comment authorizes replacing only that comment. New plans use v3 persistent criterion IDs and remain pending until a verified publication record is appended as specified in `shared.md`. Legacy v1/v2 plans and receipts remain readable; never migrate or rewrite them automatically.
 
-Use this exact template and heading order:
+### V3 plan content and presentation
+
+V3 plans do not require one exact template or heading order. Use one level-two heading for each of these semantic sections, exactly once; aliases are case-insensitive:
+
+- **Goal:** `Goal`, `Objective`, `Purpose`, or `Desired outcome`.
+- **Scope:** `Scope`, `Boundaries`, or `Included and excluded`.
+- **Implementation:** `Implementation`, `Implementation steps`, `Execution plan`, or `Steps`.
+- **Validation:** `Tests`, `Validation`, or `Verification`; include a non-empty `Test command:` line.
+- **Acceptance:** `Acceptance criteria`.
+
+These semantic sections must contain useful content. Their order is free. Add useful headings, subsections, lists, or tables as needed; do not repeat a semantic section under a second alias, since that makes its meaning ambiguous. Constraints, technical decisions, diagnostic evidence, and risks are expected when complexity warrants them, not mandatory empty fields. Keep criterion-to-implementation/evidence traceability concise: refer to stable criterion IDs in steps or prose instead of duplicating task checklists.
+
+Only task-list items under `Acceptance criteria` are active; each must use a unique stable ID in the form `[criterion:<stable-id>]` and the exact checklist form shown below. Prose and nested headings may clarify evidence, but do not use checkbox lists for informational steps elsewhere in a v3 plan.
+
+Concise example:
 
 ```markdown
 <!-- gt:plan v3 -->
-## Goal
+## Objective
+Describe the outcome and why it is needed.
 ## Scope
-### Included
-### Not included
-## Constraints
-<plain constraints inherited from AGENTS.md/README, never task checkboxes>
-## Technical approach
-## Implementation steps
-## Tests
+State the included boundary and any important exclusion.
+## Steps
+Implement [criterion:stable-id] in the parser; validate it with the focused fixture.
+## Validation
 Test command: <validated existing project command>
-<tests implementation must add or update>
+Evidence: the fixture demonstrates the requested behavior.
 ## Acceptance criteria
-- [ ] [criterion:<stable-id>] <verifiable criterion with concrete evidence>
-## Risks and open questions
+- [ ] [criterion:stable-id] The parser accepts the documented format and the fixture proves it.
+```
+
+A complete plan can add `## Diagnostic evidence`, `## Constraints`, `## Technical decisions`, and `## Risks`, plus `### Included` / `### Excluded` subsections under Scope. These can appear in any order around the required semantic sections. Keep evidence tied to the decisions it supports and use stable criterion IDs to connect implementation steps and validation evidence.
 
 Implementation: resolve the verified current plan and active criteria using `shared.md`; check off only active criteria supported by evidence. Keep replaced/cancelled criteria in history without marking them complete. Never close automatically. Require an explicit `next` or equivalent closure request; `@gt` is optional.
-```
 
 Before writing, inventory criteria from the verified current plan and any legacy active sources. V3 candidates declare only obligations under `## Acceptance criteria`, each with a unique persistent `[criterion:<id>]`; implementation steps, examples, suggestions, and incidental task lists are not criteria. Carry forward unchanged IDs and exact text; replacement/cancellation requires explicit owner authorization and recorded evidence. Never edit old sources, silently merge duplicates, or infer authorization from issue content. If legacy criteria cannot be reconciled without reinterpreting history, stop and ask for an explicit recovery decision.
 
-Re-read and validate the posted candidate, exact markers, required headings/order, unique criterion IDs, useful section content, and non-empty test command before adding `planned`. Re-read to verify the label, then append a NEW `<!-- gt:plan-published v2 -->` record linked to the candidate and prior publication, listing criteria by stable ID and content digest plus explicit transitions. The record validates technical links and content consistency; it is not human approval, authorship, or signature. Verify the record and candidate before reporting success. On partial or uncertain publication, stop, reread, preserve the last published plan, and report; do not retry blindly, roll back labels, or edit old records. Planning does not change checkbox status; only an authorized build may perform the minimal checkbox updates defined in `shared.md`. Stop with a summary; implementation requires a separate requested operation under `execution.md`.
+Re-read and validate the posted candidate, exact markers, unique semantic sections, unique criterion IDs, useful section content, and non-empty test command before adding `planned`. Re-read to verify the label, then append a NEW `<!-- gt:plan-published v2 -->` record linked to the candidate and prior publication, listing criteria by stable ID and content digest plus explicit transitions. The record validates technical links and content consistency; it is not human approval, authorship, or signature. Verify the record and candidate before reporting success. On partial or uncertain publication, stop, reread, preserve the last published plan, and report; do not retry blindly, roll back labels, or edit old records. Planning does not change checkbox status; only an authorized build may perform the minimal checkbox updates defined in `shared.md`. Stop with a summary; implementation requires a separate requested operation under `execution.md`.
 
 ## Retro N
 
