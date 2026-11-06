@@ -243,11 +243,29 @@ test("v3 pending candidate does not replace the current legacy plan or activate 
   assert.ok(!result.activeCriteria.some((item) => item.document === pending.id));
 });
 
-test("v3 publication selects declared criteria and ignores incidental task lists", () => {
+test("v3 publication explicitly retains legacy issue-body checklist items", () => {
   const issueNumber = 9;
   const body = "- [ ] incidental issue checklist\n";
-  const plan = v3PlanComment("C34", v2, "2026-01-01T00:00:00Z", issueNumber);
-  const publication = publicationComment("C35", plan, null, [], "2026-01-02T00:00:00Z", issueNumber);
+  const oldItem = extractTaskItems(issueNumber, "issue-body", body)[0];
+  const recoveryDigest = digestText(JSON.stringify([{
+    id: oldItem.id,
+    document: oldItem.document,
+    line: oldItem.line,
+    text: oldItem.text,
+    sourceDigestSha256: oldItem.sourceDigestSha256,
+  }]));
+  const seed = v3PlanComment("C34", v2, "2026-01-01T00:00:00Z", issueNumber);
+  const plan = comment("C34", seed.body.replace(
+    "[criterion:core] The v3 plan is structurally valid.",
+    "[criterion:core] The v3 plan is structurally valid.\n- [ ] [criterion:incidental] incidental issue checklist",
+  ), "2026-01-01T00:00:00Z", issueNumber);
+  const recovery = {
+    planCommentId: null,
+    planDigestSha256: recoveryDigest,
+    authorizationEvidence: "The publication explicitly retains every pre-existing issue-body checklist item unchanged.",
+    mappings: [{ legacyItemId: oldItem.id, status: "retained", criterionId: "incidental" }],
+  };
+  const publication = publicationComment("C35", plan, null, [], "2026-01-02T00:00:00Z", issueNumber, recovery);
   const pending = resolveCurrentPlan({ number: issueNumber, body, comments: [plan] });
   assert.equal(pending.valid, false);
   assert.ok(pending.diagnostics.some((message) => message.includes("pending")));
@@ -257,8 +275,8 @@ test("v3 publication selects declared criteria and ignores incidental task lists
   assert.equal(result.publication.id, publication.id);
   assert.deepEqual(result.activeCriteria.map((item) => [item.id, item.text, item.checked]), [
     ["core", "The v3 plan is structurally valid.", false],
+    ["incidental", "incidental issue checklist", false],
   ]);
-  assert.equal(result.activeCriteria.some((item) => item.text.includes("incidental")), false);
 });
 
 test("v3 revisions preserve stable criterion identity across unrelated edits and reject changed text", () => {
@@ -388,6 +406,61 @@ test("v3 publication branches block selection; legacy transitions require explic
   assert.ok(partial.diagnostics.some((message) => message.includes("pending")));
 });
 
+test("v3 root publication can explicitly recover body-only legacy checklists", () => {
+  const issueNumber = 9;
+  const body = "- [ ] Preserve the first body requirement.\n- [x] Preserve the second body requirement.\n";
+  const oldItems = extractTaskItems(issueNumber, "issue-body", body);
+  const inventoryDigest = digestText(JSON.stringify(oldItems.map(({ id, document, line, text, sourceDigestSha256 }) =>
+    ({ id, document, line, text, sourceDigestSha256 }))));
+  const seed = v3PlanComment("C60", v2, "2026-01-01T00:00:00Z", issueNumber);
+  const plan = comment("C60", seed.body.replace(
+    "[criterion:core] The v3 plan is structurally valid.",
+    "[criterion:first] Preserve the first body requirement.\n- [x] [criterion:second] Preserve the second body requirement.",
+  ), "2026-01-01T00:00:00Z", issueNumber);
+  const recovery = {
+    planCommentId: null,
+    planDigestSha256: inventoryDigest,
+    authorizationEvidence: "Owner requested resolving the migration blocker and publishing the plan; preserve the existing criteria unchanged.",
+    mappings: oldItems.map((item, index) => ({
+      legacyItemId: item.id,
+      status: "retained",
+      criterionId: index === 0 ? "first" : "second",
+    })),
+  };
+  const publication = publicationComment("C61", plan, null, [], "2026-01-02T00:00:00Z", issueNumber, recovery);
+  const result = resolveCurrentPlan({ number: issueNumber, body, comments: [plan, publication] });
+  assert.equal(result.valid, true, result.diagnostics.join("; "));
+  assert.deepEqual(result.activeCriteria.map(({ id, text, checked }) => [id, text, checked]), [
+    ["first", "Preserve the first body requirement.", false],
+    ["second", "Preserve the second body requirement.", true],
+  ]);
+
+  const completedPlan = comment("C60", plan.body.replace(
+    "[ ] [criterion:first]", "[x] [criterion:first]",
+  ), "2026-01-01T00:00:00Z", issueNumber);
+  const completedPublication = publicationComment("C61", completedPlan, null, [],
+    "2026-01-02T00:00:00Z", issueNumber, recovery);
+  const completed = resolveCurrentPlan({ number: issueNumber, body, comments: [completedPlan, completedPublication] });
+  assert.equal(completed.valid, true, completed.diagnostics.join("; "));
+  assert.equal(completed.activeCriteria[0].checked, true,
+    "v3 build progress advances a previously unchecked retained legacy item");
+
+  const regressedPlan = comment("C60", plan.body.replace(
+    "[x] [criterion:second]", "[ ] [criterion:second]",
+  ), "2026-01-01T00:00:00Z", issueNumber);
+  const regressedPublication = publicationComment("C61", regressedPlan, null, [],
+    "2026-01-02T00:00:00Z", issueNumber, recovery);
+  const regressed = resolveCurrentPlan({ number: issueNumber, body, comments: [regressedPlan, regressedPublication] });
+  assert.equal(regressed.valid, false);
+  assert.ok(regressed.diagnostics.some((message) => message.includes("cannot be unchecked")));
+
+  const incomplete = publicationComment("C62", plan, null, [], "2026-01-02T00:00:01Z", issueNumber,
+    { ...recovery, mappings: recovery.mappings.slice(0, 1) });
+  const rejected = resolveCurrentPlan({ number: issueNumber, body, comments: [plan, incomplete] });
+  assert.equal(rejected.valid, false);
+  assert.ok(rejected.diagnostics.some((message) => message.includes("unmapped")));
+});
+
 test("valid receipt selects its exact plan and classifies accepted criteria", () => {
   const issueNumber = 9;
   const body = "- [ ] issue requirement\n";
@@ -514,7 +587,8 @@ test("adversarial scenario fixtures are inert and explicitly agent-evaluation-on
     "contextual-invalid-target", "bare-gt-help", "compound-explicit-effects",
     "compound-dependent-failure", "decision-evidence-insufficient", "partial-commit-push",
     "concise-test-summary", "natural-language-request", "no-write-authorization",
-    "relationship-snapshot-unknown"]) {
+    "relationship-snapshot-unknown", "structure-simple-deliverable", "structure-independent-deliverables",
+    "structure-material-uncertainty", "structure-existing-issue"]) {
     assert.ok(scenarios.some((scenario) => scenario.id === id), `missing agent scenario ${id}`);
   }
   const moduleSource = readFileSync(join(root, "../../../skills/gt/lib/plan-contract.mjs"), "utf8");

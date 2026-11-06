@@ -261,11 +261,16 @@ function validatePublicationRecord(record, comment, issue, byId) {
 
 function validateLegacyRecovery(recovery, legacyResult, plan, record) {
   const errors = [];
-  if (!recovery || typeof recovery !== "object" || recovery.planCommentId !== legacyResult.plan?.id
-    || recovery.planDigestSha256 !== digestText(legacyResult.plan?.body ?? "")
+  const hasLegacyPlan = Boolean(legacyResult.plan);
+  const sourceMatches = hasLegacyPlan
+    ? recovery?.planCommentId === legacyResult.plan.id
+      && recovery?.planDigestSha256 === digestText(legacyResult.plan.body)
+    : recovery?.planCommentId === null
+      && recovery?.planDigestSha256 === legacyResult.recoveryDigest;
+  if (!recovery || typeof recovery !== "object" || !sourceMatches
     || typeof recovery.authorizationEvidence !== "string" || !recovery.authorizationEvidence.trim()
     || !Array.isArray(recovery.mappings)) {
-    return { errors: ["Explicit legacy recovery must identify the current legacy plan, its digest, authorization evidence, and mappings"], criteria: [], historicalCriteria: [] };
+    return { errors: ["Explicit legacy recovery must identify the current legacy plan or checklist inventory, its digest, authorization evidence, and mappings"], criteria: [], historicalCriteria: [] };
   }
   const declared = new Map(record.criteria.map((item) => [item.id.toLowerCase(), item]));
   const active = new Map(legacyResult.activeCriteria.map((item) => [item.id, item]));
@@ -309,7 +314,10 @@ function validateLegacyRecovery(recovery, legacyResult, plan, record) {
     const retained = recovery.mappings.find((mapping) => mapping.status === "retained"
       && String(mapping.criterionId).toLowerCase() === criterion.id);
     const prior = retained ? active.get(retained.legacyItemId) : null;
-    return { ...criterion, checked: prior ? prior.checked : false };
+    if (prior?.checked && !criterion.checked) {
+      errors.push(`Retained checked legacy criterion cannot be unchecked in the v3 plan: ${prior.id}`);
+    }
+    return { ...criterion, checked: Boolean(prior?.checked || criterion.checked) };
   });
   return { errors, criteria, historicalCriteria };
 }
@@ -695,8 +703,13 @@ export function resolveCurrentPlan(issue) {
     if (publicationComments.length !== publicationMarkers.length) {
       return { valid: false, plan: null, diagnostics: ["Malformed or unknown publication record marker"], activeCriteria: [] };
     }
+    const legacyComments = issue.comments.filter((comment) => !comment.body.startsWith(PLAN_V3)
+      && comment.body.split(/\r?\n/, 1)[0] !== PUBLISHED_V2);
+    const hasLegacyInventory = extractTaskItems(issue.number, "issue-body", issue.body).length > 0
+      || legacyComments.some((comment) => extractTaskItems(issue.number, comment.id, comment.body).length > 0);
     const hasLegacyHistory = issue.comments.some((comment) => comment.body.startsWith(PLAN_V1)
-      || comment.body.startsWith(PLAN_V2) || comment.body.split(/\r?\n/, 1)[0] === ACCEPTED);
+      || comment.body.startsWith(PLAN_V2) || comment.body.split(/\r?\n/, 1)[0] === ACCEPTED)
+      || hasLegacyInventory;
     const records = new Map();
     for (const comment of publicationComments) {
       const parsed = parsePublicationBody(comment.body);
@@ -750,8 +763,6 @@ export function resolveCurrentPlan(issue) {
       previousPlan = plan;
     }
     if (hasLegacyHistory && chain.length) {
-      const legacyComments = issue.comments.filter((comment) => !comment.body.startsWith(PLAN_V3)
-        && comment.body.split(/\r?\n/, 1)[0] !== PUBLISHED_V2);
       const legacyResult = resolveCurrentPlan({ ...issue, comments: legacyComments });
       const rootRecord = records.get(chain[0].id);
       const rootPlan = byId.get(rootRecord.planCommentId);
@@ -883,7 +894,17 @@ export function resolveCurrentPlan(issue) {
   const eligible = plans.filter(({ parsed }) => parsed.valid && !parsed.requiresAcceptance && !parsed.requiresPublication);
   eligible.sort((a, b) => (a.comment.createdAt ?? "").localeCompare(b.comment.createdAt ?? "") || a.comment.id.localeCompare(b.comment.id));
   if (!eligible.length) {
-    return { valid: false, plan: null, diagnostics: [...diagnostics, "No valid eligible plan exists"], activeCriteria: [] };
+    const activeCriteria = [];
+    for (const [document, text] of docs) activeCriteria.push(...inventoryDocument(issue.number, document, text));
+    const recoveryDigest = digestText(JSON.stringify(activeCriteria.map(({ id, document, line, text, sourceDigestSha256 }) =>
+      ({ id, document, line, text, sourceDigestSha256 }))));
+    return {
+      valid: false,
+      plan: null,
+      diagnostics: [...diagnostics, "No valid eligible plan exists"],
+      activeCriteria: activeCriteria.map((item) => withCheckboxStatus(item, docs)),
+      recoveryDigest,
+    };
   }
   const selected = eligible.at(-1).comment;
   const activeCriteria = [];

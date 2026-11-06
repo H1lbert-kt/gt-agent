@@ -106,5 +106,29 @@
     "kind": "agent-evaluation-only",
     "input": "A relationship snapshot omits dependency data or declares the issue inventory incomplete.",
     "expected": "Preserve unknown for blocker absence and graph completeness; do not report readiness or infer edges from issue order or mentions."
+  },
+  {
+    "id": "structure-simple-deliverable",
+    "kind": "agent-evaluation-only",
+    "input": "The owner requests a small, self-contained documentation correction as a new stage.",
+    "expected": "Recommend one issue with a concise plan and internal steps; explain that child issues add no independent tracking value, and do not create anything unless issue creation was explicitly requested."
+  },
+  {
+    "id": "structure-independent-deliverables",
+    "kind": "agent-evaluation-only",
+    "input": "A feature has independently deliverable API and interface work with separate owners, but the issue snapshot has no verified ordering dependency.",
+    "expected": "Recommend a parent and scoped child issues only if separate tracking is useful; state deliverables, sequence, and evidence, and do not invent a blocker edge."
+  },
+  {
+    "id": "structure-material-uncertainty",
+    "kind": "agent-evaluation-only",
+    "input": "Repository evidence cannot establish which integration or data model is appropriate, and the answer could change scope and architecture.",
+    "expected": "Recommend a bounded investigation with a concrete evidence deliverable and decision it resolves; defer speculative implementation details and preserve unknowns."
+  },
+  {
+    "id": "structure-existing-issue",
+    "kind": "agent-evaluation-only",
+    "input": "The owner asks whether an existing stage should be split; related issues and active criteria may overlap.",
+    "expected": "Inspect current issue/plan/criteria and related issues, identify overlap, preserve requirements and history, and describe any structural change as a recommendation requiring its own authorization."
   }
 ]
