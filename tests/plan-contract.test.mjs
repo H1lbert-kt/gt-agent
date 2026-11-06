@@ -126,6 +126,22 @@ test("v3 accepts concise and complete semantic formats independent of order", ()
   assert.match(parsePlanComment(withExtraSubsections).diagnostics.join(" "), /exactly one unambiguous scope/);
 });
 
+test("v3 accepts readable presentation without activating informational checklists", () => {
+  const presented = fixture("plan-v3-presented.md");
+  const parsed = parsePlanComment(presented);
+  assert.equal(parsed.valid, true, parsed.diagnostics.join("; "));
+  assert.equal(parsed.version, 3);
+  assert.equal(parsed.testCommand, "node --test tests/");
+
+  const acceptance = presented.split("## Acceptance criteria")[1];
+  assert.deepEqual(
+    [...acceptance.matchAll(/^- \[ \] \[criterion:([a-z0-9-]+)\]/gm)].map((match) => match[1]),
+    ["concise-format"],
+  );
+  assert.equal(parsePlanComment(presented.replace("## Acceptance criteria", "<details>\n<summary>Criteria</summary>\n## Acceptance criteria")).valid, true);
+  assert.equal(parsePlanComment(presented.replace("Test command: node --test tests/", "Test command: ")).valid, false);
+});
+
 test("v3 still requires unambiguous semantic sections, a test command, and explicit criterion tasks", () => {
   const concise = fixture("plan-v3-concise.md");
   const missingGoal = parsePlanComment(concise.replace("## Objective", "## Context"));

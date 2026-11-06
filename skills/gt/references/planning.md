@@ -67,6 +67,46 @@ V3 plans do not require one exact template or heading order. Use one level-two h
 
 These semantic sections must contain useful content. Their order is free. Add useful headings, subsections, lists, or tables as needed; do not repeat a semantic section under a second alias, since that makes its meaning ambiguous. Constraints, technical decisions, diagnostic evidence, and risks are expected when complexity warrants them, not mandatory empty fields. Keep criterion-to-implementation/evidence traceability concise: refer to stable criterion IDs in steps or prose instead of duplicating task checklists.
 
+### Readable issue presentation
+
+Keep the exact plan marker as the first line. Immediately after it, a short bold summary may identify the objective, scope, and revision/publication state; describe state as informational and point out that the verified publication record is authoritative. Do not invent a revision number or imply a candidate is published. Separate the summary from the body with a blank line or one restrained horizontal rule.
+
+Use descriptive headings, short paragraphs, and consistent spacing. Number implementation steps when order matters and name each step's deliverable. Prefer short lists over wide tables; use a table only for a compact comparison that remains understandable on a narrow screen. `<details>` may hold supplementary background or lengthy examples, but never the goal, scope, acceptance criteria, or essential validation. Use checkboxes only for active acceptance criteria under `## Acceptance criteria`; examples and informational steps use prose or numbered lists. Keep links descriptive and verify their destinations. These are presentation recommendations, not additional semantic sections or parser requirements.
+
+Example (the summary is descriptive; publication records determine actual state):
+
+```markdown
+<!-- gt:plan v3 -->
+**Summary:** Clarify the parser's behavior; scope: parser and focused tests; revision: candidate (not yet published).
+
+---
+
+## Objective
+Accept the documented concise format without changing legacy plan behavior.
+
+## Scope
+Included: the v3 parser and its fixtures. Excluded: publication semantics.
+
+## Steps
+1. Update the parser — deliverable: focused behavior and regression tests.
+2. Validate — deliverable: passing offline suite.
+
+## Validation
+Test command: node --test tests/
+The focused fixture demonstrates the accepted format.
+
+## Acceptance criteria
+- [ ] [criterion:concise-format] The parser accepts the format and regression tests cover it.
+
+<details>
+<summary>Supplementary context</summary>
+
+See the [project overview](https://github.com/H1lbert-kt/gt-agent#readme) for repository context.
+</details>
+```
+
+The example is illustrative, not an issue's current status. Keep candidate/published wording accurate when adapting it, and never use visual labels as a substitute for plan resolution or publication verification.
+
 Only task-list items under `Acceptance criteria` are active; each must use a unique stable ID in the form `[criterion:<stable-id>]` and the exact checklist form shown below. Prose and nested headings may clarify evidence, but do not use checkbox lists for informational steps elsewhere in a v3 plan.
 
 Concise example:

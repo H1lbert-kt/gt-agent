@@ -61,6 +61,8 @@ Each request selects an operation, not a mode. Reports such as status, doctor, i
 
 Plans are proportional to risk: concise plans cover objective, scope, implementation, validation, and criteria; complete plans add diagnosis/evidence, boundaries, constraints, technical decisions, sequencing, and risks when useful. V3 validation allows reordered sections and useful subsections while requiring unambiguous semantic sections and a validated `Test command:`. V1/v2 remain under their historical structural rules.
 
+For readability in GitHub issues, keep the plan marker first and optionally follow it with a short objective/scope/revision summary. Treat that summary as descriptive—the verified publication record is authoritative. Use clear headings, modest spacing, numbered steps with deliverables when order matters, and lists instead of wide tables. Keep acceptance criteria and essential validation visible; use checkboxes only for active criteria and reserve `<details>` for supplementary material. See [the planning guidance](skills/gt/references/planning.md#readable-issue-presentation) for a rendered-format example.
+
 ## Workflow contract
 
 - **Planning operations** investigate only as broadly as the risk requires, ask targeted questions when material decisions remain, create one issue per deliverable by default (optional child issues for independent work), and record concise or detailed plans as appropriate. A clearly authorized combined create-and-plan request avoids redundant confirmation between those planning writes, while retaining candidate/label/publication verification. Planning does not authorize implementation, commit, push, or closure.
