@@ -496,7 +496,8 @@ test("adversarial scenario fixtures are inert and explicitly agent-evaluation-on
   }
   for (const id of ["contextual-unique-target", "contextual-ambiguous-target",
     "contextual-invalid-target", "bare-gt-help", "compound-explicit-effects",
-    "compound-dependent-failure"]) {
+    "compound-dependent-failure", "decision-evidence-insufficient", "partial-commit-push",
+    "concise-test-summary"]) {
     assert.ok(scenarios.some((scenario) => scenario.id === id), `missing agent scenario ${id}`);
   }
   const moduleSource = readFileSync(join(root, "../../../skills/gt/lib/plan-contract.mjs"), "utf8");

@@ -18,6 +18,10 @@ The typical workflow is **understand → plan → implement → review → verif
 - **Reports and stage management:** status, doctor, impact, handoff, log, retro, skip, and reopen each have their own effects and authorization requirements. Reports are available whenever relevant, including during implementation; requesting a report does not authorize repairs or implementation.
 - **Delivery:** commit, publish, owner-requested close, and `next` are independent operations with their own gates. Commit and publish need explicit authorization and do not follow implementation automatically.
 
+## Decision evidence and partial outcomes
+
+When a decision materially affects scope or a write, state what was observed separately from what is inferred or recommended, and identify the source that supports a target, scope, dependency, or priority choice. If GitHub or repository data is incomplete or conflicting, preserve `unknown`; do not turn missing evidence into a claim that no blocker exists. For a partial or uncertain operation, summarize the confirmed effects, what failed or remains unknown, and the safest next step. The next step is advice, not authorization; reread mutable state before any separately authorized recovery, and never retry stale writes or roll back automatically. Keep test reports short and verifiable: name the command and runner outcome, do not invent counts, and distinguish local deterministic tests/inert fixtures from live API, concurrency, and model-behavior evidence.
+
 Operation distinctions: `status` is a progress overview while `doctor` is a planning-integrity audit; `review` is code review and `verify` is implementation verification; `next` is normal gated completion, while `skip` and `reopen` are administrative operations. `references/planning.md` and `references/execution.md` group operation contracts for on-demand reading; they do not assign exclusive responsibilities to agents.
 
 ## Stage issue structure and labels

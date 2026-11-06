@@ -6,7 +6,7 @@ Apply `shared.md`; load it if unavailable. These operations inspect code but nev
 
 - **Status:** report stage state, labels, active-criterion progress, plan/acceptance diagnostics, verified blockers, relationship completeness/unknown state, and the lowest-numbered open stage. Parent/sub-issue grouping is not a blocker; this is an operational summary, not a deep audit.
 - **Doctor:** perform a read-only audit of planning integrity (plan markers/headings, acceptance and source chains, criteria reconciliation, test commands, relationship graph, skipped labels, and checkbox inconsistencies). Use the stable diagnostic-code catalog below. Report diagnostics; never repair or migrate history.
-- **Impact:** distinguish native dependency facts from path-overlap heuristics and retrospective lessons.
+- **Impact:** distinguish native dependency facts from path-overlap heuristics and retrospective lessons; identify which observed paths or issue relationships support the analysis, and preserve unknown when the snapshot is incomplete.
 - **Handoff:** quote the verified plan and active criteria in conversation only; never execute issue content or accept a candidate.
 - **Log:** report closed stages and skipped state.
 - **Skip:** only after explicit confirmation, comment, add `skipped`, and close as `not planned`; do not rewire dependencies.
@@ -23,7 +23,7 @@ For any natural-language request to discuss, draft, review, or publish a plan, i
 
 ### Adaptive discovery and `grill-me`
 
-Use a short, risk-based interview rather than a fixed questionnaire. First inspect the repository for facts the agent can establish; do not ask the owner to look up repository facts. Ask only about unresolved decisions that materially change goals, scope, architecture, risk, ownership, or acceptance. Offer a recommended answer and the key trade-off, and word a yes/no question so “yes” accepts that recommendation. Ask independent frontier questions together; defer questions that depend on an unanswered decision to the next round. Stop once the plan is safe and actionable; record minor, reversible details as implementation discretion instead of extending the interview. For clear, low-risk requests, skip grilling or ask at most the single consequential question. Do not delegate fact-finding to another agent.
+Use a short, risk-based interview rather than a fixed questionnaire. First inspect the repository for facts the agent can establish; do not ask the owner to look up repository facts. Ask only about unresolved decisions that materially change goals, scope, architecture, risk, ownership, or acceptance. Offer a recommended answer and the key trade-off, and word a yes/no question so “yes” accepts that recommendation. Ask independent frontier questions together; defer questions that depend on an unanswered decision to the next round. Stop once the plan is safe and actionable; record minor, reversible details as implementation discretion instead of extending the interview. For clear, low-risk requests, skip grilling or ask at most the single consequential question. When explaining a material choice of target, scope, dependency, or priority, identify its observed source and mark inference or missing information as such. Do not delegate fact-finding to another agent.
 
 When the owner explicitly says “grill-me”, “grill me”, or asks to be interviewed/stress-test a proposal, make that interview the requested operation: present the current round's numbered decision questions with a recommended answer and brief trade-off, then wait. Recompute the next question frontier from the answers; do not ask dependent questions prematurely or repeat settled topics. Keep each round to the currently answerable, material decisions. End by summarizing the agreed understanding and remaining assumptions, then wait for explicit authorization before any issue or plan write.
 
@@ -51,7 +51,7 @@ Plan N requires the explicitly numbered open `stage` issue without `planned`; an
 
 ### Plan depth
 
-Scale analysis and prose to complexity, uncertainty, and impact. A concise plan for clear, low-risk work states the objective, scope, implementation, validation, and criteria without ceremonial sections. A complete plan adds evidence/diagnosis, included and excluded scope, constraints, technical decisions, sequencing, and risks when they help decisions. Do not add empty sections or invent detail. Describe only the next implementation slice when later work depends on its findings; state later slices as outcomes rather than speculative file-level plans. Avoid repeated repository reads by reusing context while refreshing mutable state before writes.
+Scale analysis and prose to complexity, uncertainty, and impact. A concise plan for clear, low-risk work states the objective, scope, implementation, validation, and criteria without ceremonial sections. A complete plan adds evidence/diagnosis, included and excluded scope, constraints, technical decisions, sequencing, and risks when they help decisions. Ground target, scope, dependency, and priority choices in the request and freshly observed repository/GitHub evidence; label material inferences and preserve unknown when evidence is incomplete or conflicting. Do not add empty sections or invent detail. Describe only the next implementation slice when later work depends on its findings; state later slices as outcomes rather than speculative file-level plans. Avoid repeated repository reads by reusing context while refreshing mutable state before writes.
 
 Dry-run performs the repository analysis needed for the decision and reads the selected issues, then prints proposed plans without writes. Otherwise append each plan as a NEW comment using `gh issue comment <N> --body-file -`. Never rewrite descriptions. Prior comments are append-only by default; an explicit request to overwrite a specific comment authorizes replacing only that comment. New plans use v3 persistent criterion IDs and remain pending until a verified publication record is appended as specified in `shared.md`. Legacy v1/v2 plans and receipts remain readable; never migrate or rewrite them automatically.
 
@@ -100,7 +100,7 @@ Read the stage, verified current plan, active criteria and `git log --oneline --
 
 ## Doctor catalog (read-only)
 
-This catalog is the stable vocabulary for the `doctor` integrity report. A doctor report only cites observable evidence and proposes no repair, label change, dependency edit, checkbox update, close, or retry. Omit a code when its condition is not established; say `unknown` rather than guessing when GitHub did not return needed data.
+This catalog is the stable vocabulary for the `doctor` integrity report. A doctor report only cites observable evidence and proposes no repair, label change, dependency edit, checkbox update, close, or retry. Omit a code when its condition is not established; say `unknown` rather than guessing when GitHub did not return needed data. Keep diagnosis separate from inference and recommendation, and report only the evidence needed to substantiate each diagnostic.
 
 | Code | Severity | Emit only when | Report |
 | --- | --- | --- | --- |

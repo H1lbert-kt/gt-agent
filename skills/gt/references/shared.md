@@ -6,6 +6,14 @@ Reuse instructions, not stale state. Preserve required guards, target
 resolution, fresh snapshots, pre-write rereads, and post-write verification.
 Prior authorization and test results do not carry forward.
 
+## Decision evidence and reporting
+
+- When a decision materially affects scope or a write, distinguish observed facts from inferences and recommendations. Cite the concrete source used (for example, the user's request, a freshly read issue field, a repository file, or a GitHub response); do not present an inference as an observation.
+- For target, scope, dependency, and priority choices, state the evidence that selected the option. If the available snapshot is incomplete or conflicting, report the relevant state as unknown and ask or stop where that uncertainty affects safety; do not infer priority from issue order or infer a missing dependency from text.
+- For a partial or uncertain operation, report the operation, confirmed effects, failed or unknown effects, and the safest next step. A suggested next step is not authorization. Reread mutable state before advising recovery; do not retry stale writes, roll back automatically, or claim atomicity.
+- Keep reports concise. Summarize the validated command and runner outcome, and cite only the relevant evidence; do not invent counts or paste extensive logs when a short verifiable summary suffices. If the runner prints no count, say `not reported`.
+- Keep evidence categories distinct: deterministic local tests establish only their tested contract; inert fixtures and simulations do not establish live GitHub/API behavior, concurrency, or model behavior. Name the validation boundary when it matters to the conclusion.
+
 ## Repository guard
 
 Before any `gh` call, run `git remote get-url origin`. Stop if it fails or is not a GitHub remote. Normalize HTTPS or SSH URLs to `owner/repo` by removing the host and trailing `.git`. If the user supplied a repository, normalize and compare it; stop on mismatch. Run all `gh` commands from this repository without `-R`. Check `gh auth status` before writes. Never change remotes or authentication automatically.

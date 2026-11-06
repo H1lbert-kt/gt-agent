@@ -255,6 +255,10 @@ test("shared repository rules retain guards, issue identity, and safe test valid
   assert.match(shared, /a unique contextual reference in the active conversation may identify it/);
   assert.match(shared, /Contextual references must have one unambiguous referent/);
   assert.match(shared, /If an explicit or contextual target is invalid, stop without silently falling back/);
+  for (const literal of ["Decision evidence and reporting", "distinguish observed facts from inferences",
+    "confirmed effects", "do not retry stale writes", "do not invent counts", "inert fixtures"]) {
+    assert.ok(shared.includes(literal), `missing evidence/reporting rule: ${literal}`);
+  }
   for (const literal of ["Explicit targets and checkbox updates", "issue number", "freshly",
     "optimistic conflict detection", "atomic compare-and-swap", "stop further writes",
     "Selecting a plan and classifying criteria", "unique valid chain tip",
@@ -276,6 +280,17 @@ test("context, ambiguity, and compound requests keep target resolution separate 
   assert.match(readme, /Context can identify a target but never carries authorization/);
   assert.match(guide, /A bare `@gt` offers contextual read-only help/);
   assert.match(guide, /If multiple issues could be meant, ask/);
+});
+
+test("planning and execution explain evidence, uncertainty, and partial outcomes", () => {
+  assert.match(plan, /material choice of target, scope, dependency, or priority[\s\S]*observed source/);
+  assert.match(plan, /preserve unknown when evidence is incomplete or conflicting/);
+  assert.match(execution, /confirmed effects, failures\/unknowns, and the safe next step/);
+  assert.match(execution, /distinguish observed results from inference/);
+  assert.match(entry, /distinguish observed facts, inferences, and recommendations/);
+  assert.match(readme, /Decision evidence and recovery/);
+  assert.match(guide, /Decision evidence and partial outcomes/);
+  assert.match(guide, /The next step is advice, not authorization/);
 });
 
 test("skill and docs clarify explicit targets and narrow checkbox authorization", () => {
