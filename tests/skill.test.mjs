@@ -321,6 +321,20 @@ test("README and guide describe the skill as the sole interface", () => {
   assert.match(guide, /no GitHub, network, filesystem, or shell side effects/);
 });
 
+test("natural language is primary and validation levels are not conflated", () => {
+  const naturalLanguage = readme.indexOf("Ask in natural language");
+  const shortcuts = readme.indexOf("Named operations are optional shortcuts");
+  assert.ok(naturalLanguage >= 0 && shortcuts > naturalLanguage,
+    "README presents natural-language requests before named shortcuts");
+  assert.match(guide, /Named operations[\s\S]*optional shortcuts, not a required command language/);
+  for (const text of [readme, guide]) {
+    assert.match(text, /deterministic offline tests/i);
+    assert.match(text, /integration simulation/i);
+    assert.match(text, /agent evaluation/i);
+    assert.match(text, /inert snapshots (?:do not simulate|are not simulations)/i);
+  }
+});
+
 test("bundle installation docs define read-only checks, explicit external sync, and unique skill IDs", () => {
   for (const text of [readme, guide]) {
     assert.match(text, /canonical, versioned source|canonical versioned source/i);

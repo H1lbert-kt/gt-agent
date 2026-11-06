@@ -33,15 +33,26 @@ Requirements: OpenCode V2 with skill support, Node.js 22 or newer, Git, and auth
 
 ## Use
 
+Ask in natural language; no command prefix or fixed syntax is required:
+
 ```text
-@gt plan <request>       Create stages or plan an issue
-@gt build <issue-number> Implement that planned stage
-@gt review               Review changes without writing
-@gt status               Read-only planning/stage overview
-@gt doctor               Read-only planning-integrity audit
-@gt commit               Review and create one commit
-@gt publish              Push existing commits only
-@gt next                 Check gates and close the lowest open stage
+Plan the offline test and documentation improvements for issue 42.
+Build issue 42, then review the changes without committing.
+Show me which stages are blocked and what evidence supports that.
+The commit succeeded but publishing failed—explain the current state; don't retry.
+```
+
+Named operations are optional shortcuts when they are more convenient:
+
+```text
+@gt plan 42       Plan an issue
+@gt build 42      Implement that planned stage
+@gt review        Review changes without writing
+@gt status        Read-only planning/stage overview
+@gt doctor        Read-only planning-integrity audit
+@gt commit 42     Review and create one stage commit
+@gt publish       Push existing commits only
+@gt next          Check gates and close the lowest open stage
 ```
 
 For related requests, repeating `@gt` is optional. Planning is proportional: clear, low-risk work gets concise discovery and a short plan; grill the owner only on material unresolved decisions, in dependency-aware rounds, with a recommendation and trade-off. Reuse repository context and refresh mutable state rather than repeating broad reads. Use one issue per deliverable by default; child issues are optional for independently trackable work and are not automatically dependencies. An explicit request to create issue(s) and publish their plan can be handled as one validated planning operation. For example: `@gt plan 42` → `build 42` → `review` → `commit 42` → `publish` → `next`; each operation remains separately authorized unless the user explicitly requests a combined planning operation. An explicit issue number wins; a unique contextual reference such as “continue with that issue” may identify the target after the current issue state is refreshed and validated. Ambiguous or invalid targets stop without fallback. Context can identify a target but never carries authorization: “that issue” does not itself authorize a write, and a commit never implies publish. A combined create-and-plan request does not authorize implementation, commit, push, or closure. A bare `@gt` gives contextual read-only help and does not select an operation. A stage commit appends the selected issue as its final subject token, for example `@gt commit 42` → `feat: add sensors (#42)`. Plain local commits have no stage target.
@@ -71,5 +82,7 @@ Plans are proportional to risk: concise plans cover objective, scope, implementa
 - **Reports:** `@gt status` summarizes progress; `@gt doctor` lists integrity diagnostics without repairing them; `@gt verify 42` reports implementation evidence and remaining gates; `@gt next` closes only after all gates pass.
 
 The maintained offline CI runs `node --test tests/` on Node.js 22 for pushes and pull requests. Its token is read-only and it has no secret, issue-write, or publishing step.
+
+Validation has three distinct levels: deterministic offline tests execute local contracts and parsers; integration simulation is not currently part of the suite (inert snapshots are not simulations); agent evaluation means observing the skill in a separately run, controlled interaction. The offline suite does not run or prove agent evaluation, live GitHub behavior, or API concurrency.
 
 The skill entry point is [`skills/gt/SKILL.md`](skills/gt/SKILL.md); the full workflow is in its on-demand references. [`docs/skill.md`](docs/skill.md) explains operations, safety, and validation. Tests are structural and do not prove live GitHub or model behavior.

@@ -12,6 +12,8 @@ OpenCode V2 discovers project and global skills, including compatible `.claude/s
 
 The typical workflow is **understand → plan → implement → review → verify → complete**. It is not an automatic sequence or a requirement to switch modes. Infer the requested operation from natural language and context; no special command syntax is required. A bare `@gt` offers contextual read-only help rather than guessing an operation.
 
+For example, ask “Plan the test and documentation improvements for issue 42” or “Show me the verified blockers and what evidence supports them.” Named operations such as `@gt plan 42`, `@gt status`, or `@gt verify 42` are optional shortcuts, not a required command language.
+
 - **Planning:** scale repository research and plan detail to risk; ask only about material unresolved decisions, with a recommendation and trade-off. V3 plans use concise objective/scope/implementation/validation/acceptance content for simple work, adding evidence, boundaries, constraints, decisions, and risks when complexity warrants them. Semantic sections may be reordered and use helpful subsections; validation still needs a safe, non-empty test command. Default to one issue per deliverable, using child issues only for independently tracked work. A clear request to create issue(s) and publish the associated plan authorizes those planning writes together, with normal verification; it does not authorize implementation, commit, push, or closure. Discussing/reviewing a plan alone remains read-only.
 - **Implementation:** implement one planned stage within scope, validate it, and report evidence. It does not automatically replan, commit, publish, or close a stage.
 - **Review and verification:** inspect implementation changes or verify a selected stage without intentional project edits or GitHub writes.
@@ -46,7 +48,7 @@ For related requests, repeating `@gt` is optional. Reuse relevant findings acros
 
 ## Validation
 
-Run `node --test tests/` with Node.js 22 or newer. Node 22 is the supported baseline and the version used by CI. These offline structural, fixture, and bundle-helper tests do not exercise live GitHub or model behavior. See [`skills/gt/SKILL.md`](../skills/gt/SKILL.md) for operation contracts and [`skills/gt/references/`](../skills/gt/references/) for operational rules.
+Run `node --test tests/` with Node.js 22 or newer. Node 22 is the supported baseline and the version used by CI. Deterministic offline tests execute local contracts, parsers, graph analysis, and bundle behavior. The suite has no integration simulation: inert snapshots do not simulate GitHub or agent execution. Agent evaluation requires a separately run, controlled interaction whose observed output is reported; the offline suite does not perform or prove it. None of these local tests exercise live GitHub or model behavior. See [`skills/gt/SKILL.md`](../skills/gt/SKILL.md) for operation contracts and [`skills/gt/references/`](../skills/gt/references/) for operational rules.
 
 ### Deterministic contract helper
 
