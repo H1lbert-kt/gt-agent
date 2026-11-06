@@ -70,6 +70,20 @@
     "readOnly": true
   },
   {
+    "name": "invalid relationship graph",
+    "code": "GT-DOC-RELATIONSHIP-INVALID",
+    "severity": "error",
+    "evidence": "A complete relationship snapshot contains contradictory parent/child claims or a cycle.",
+    "readOnly": true
+  },
+  {
+    "name": "incomplete relationship snapshot",
+    "code": "GT-DOC-RELATIONSHIP-UNKNOWN",
+    "severity": "warning",
+    "evidence": "A hierarchy or dependency read is unavailable, so missing edges cannot be treated as absent.",
+    "readOnly": true
+  },
+  {
     "name": "partially completed operation",
     "code": "GT-DOC-PARTIAL-OPERATION",
     "severity": "error",

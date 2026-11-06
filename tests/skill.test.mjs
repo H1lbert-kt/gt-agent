@@ -117,7 +117,7 @@ test("operations table preserves effects and reference contracts without mode ow
     assert.match(text, /does not select or switch agents/);
   }
   assert.match(entry, /repeating `@gt` is optional/);
-  assert.match(readme, /each step is a separate request/);
+  assert.match(readme, /each operation remains separately authorized unless the user explicitly requests a combined planning operation/);
   assert.match(shared, /Reuse instructions, not stale state/);
   assert.match(entry, /Interpret the user's natural-language request and current conversation/);
   assert.match(entry, /A discussion, draft, or review of a plan is not/);
@@ -136,7 +136,15 @@ test("plan reference retains grounded stages, safe dependencies, and controlled 
   assert.match(plan, /append a NEW `<!-- gt:plan-published v2 -->` record/);
   assert.match(shared, /not human approval, authorship, signature, or authorization/);
   assert.match(plan, /Discussion\/drafting\/review alone is read-only/);
-  assert.match(plan, /Kickoff is a read-only survey\/proposal/);
+  assert.match(plan, /Kickoff is a read-only, proportional survey\/proposal/);
+  assert.match(plan, /Adaptive discovery and `grill-me`/);
+  assert.match(plan, /When the owner explicitly says “grill-me”, “grill me”, or asks to be interviewed/);
+  assert.match(plan, /Ask independent frontier questions together/);
+  assert.match(plan, /one issue per coherent deliverable/);
+  assert.match(plan, /single explicit request to create issue\(s\) and publish the associated plan authorizes those constituent planning writes/);
+  assert.match(plan, /Scale the amount of analysis and prose to complexity, uncertainty, and impact/);
+  assert.match(plan, /Do not pause for redundant confirmation between these steps/);
+  assert.match(plan, /does not authorize implementation, commit, push, or closure/);
   assert.match(plan, /implementation requires a separate requested operation under `execution\.md`/);
   assert.doesNotMatch(plan, /implementation is outside this skill/);
   assert.match(shared, /lib\/plan-contract\.mjs/);
@@ -206,9 +214,31 @@ test("local Markdown links in maintained docs resolve within the repository", ()
 
 test("the documented directory test command loads every suite", () => {
   const testEntry = readFileSync(join(root, "tests", "index.js"), "utf8");
-  for (const file of ["plan-contract.test.mjs", "skill-bundle.test.mjs", "skill.test.mjs"]) {
+  for (const file of ["plan-contract.test.mjs", "relationship-graph.test.mjs", "skill-bundle.test.mjs", "skill.test.mjs"]) {
     assert.ok(testEntry.includes(`./${file}`), `test directory entry is missing ${file}`);
   }
+});
+
+test("relationship contract documents distinct edge types, uncertainty, and API boundaries", () => {
+  const graph = readFileSync(join(root, "skills", "gt", "lib", "relationship-graph.mjs"), "utf8");
+  assert.match(graph, /export function analyzeRelationshipGraph/);
+  assert.match(graph, /RELATION_CYCLE/);
+  assert.match(graph, /HIERARCHY_CONFLICT/);
+  assert.match(graph, /RELATION_TARGET_UNKNOWN/);
+  assert.match(graph, /blockerState/);
+  assert.match(shared, /parent\/sub-issue data is separate/);
+  assert.match(shared, /Hierarchy mutations are not enabled by this skill/);
+  assert.match(guide, /Parent\/sub-issue edges represent grouping/);
+  assert.match(guide, /installed `gh issue` command exposes no hierarchy subcommand/);
+  assert.match(guide, /triage|permission/i);
+  assert.match(guide, /sub-issues API/);
+  assert.match(guide, /issue-dependencies API/);
+  assert.match(guide, /`Issues: read`/);
+  assert.match(guide, /`Issues: write`/);
+  assert.match(plan, /verified blockers, relationship completeness\/unknown state/);
+  assert.match(plan, /GT-DOC-RELATIONSHIP-INVALID/);
+  assert.match(plan, /GT-DOC-RELATIONSHIP-UNKNOWN/);
+  assert.match(readme, /relationship snapshots offline|hierarchy\/dependency snapshots offline/);
 });
 
 test("shared repository rules retain guards, issue identity, and safe test validation", () => {

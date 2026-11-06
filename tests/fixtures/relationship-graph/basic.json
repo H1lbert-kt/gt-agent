@@ -1,0 +1,8 @@
+{
+  "completeness": { "issues": true, "hierarchy": true, "dependencies": true },
+  "issues": [
+    { "number": 1, "state": "OPEN", "parentNumber": null, "children": [2], "blockedBy": [], "blocking": [3] },
+    { "number": 2, "state": "OPEN", "parentNumber": 1, "children": [], "blockedBy": [], "blocking": [] },
+    { "number": 3, "state": "OPEN", "parentNumber": null, "children": [], "blockedBy": [1], "blocking": [] }
+  ]
+}
