@@ -66,6 +66,7 @@ test("operations table preserves effects and reference contracts without mode ow
   const operations = table[1].split("\n").filter((line) => line.startsWith("| ") && !line.includes("---"))
     .map((line) => line.split("|").map((cell) => cell.trim()).slice(1, -1));
   const expected = [
+    ["plan a project", "planning"],
     ["kickoff/start", "planning"],
     ["create issues/stages/dependencies", "planning"],
     ["plan/plan all/replan", "planning"],
@@ -78,6 +79,8 @@ test("operations table preserves effects and reference contracts without mode ow
     ["skip", "planning"],
     ["reopen", "planning"],
     ["build/implement", "execution"],
+    ["execute planned scope", "execution"],
+    ["deliver a stage", "execution"],
     ["code review", "execution"],
     ["verify implementation", "execution"],
     ["next/normal close", "execution"],
@@ -103,12 +106,13 @@ test("operations table preserves effects and reference contracts without mode ow
   }
   assert.match(effectOf("next/normal close"), /Gate-check and close one eligible stage/);
   assert.match(effectOf("build/implement"), /selected planned scope/);
-  assert.match(entry, /not an automatic sequence: perform only the requested operation/);
-  assert.match(entry, /Commit and publish require their own explicit authorization/);
-  assert.match(entry, /Never close, plan, commit, or publish as a side effect of another operation/);
+  assert.match(entry, /user-facing workflow is \*\*plan → execute → deliver\*\*/);
+  assert.match(effectOf("deliver a stage"), /one named eligible stage in order/);
+  assert.match(entry, /deliver a stage` shortcut[\s\S]*authorizes those three writes/);
+  assert.match(entry, /Planning and execution never imply delivery/);
   assert.match(plan, /Reports may be requested whenever relevant, including during implementation/);
   assert.match(execution, /Reports and planning operations remain available under their own contracts/);
-  assert.match(execution, /no mode or agent change is required by GT/);
+  assert.match(execution, /Natural-language shortcuts compose these same operations/);
   assert.match(execution, /code review/);
   assert.match(execution, /implementation verification/);
   assert.match(readme, /`@gt status` and `@gt doctor` are distinct/);
@@ -117,14 +121,16 @@ test("operations table preserves effects and reference contracts without mode ow
     assert.match(text, /does not select or switch agents/);
   }
   assert.match(entry, /repeating `@gt` is optional/);
-  assert.match(readme, /each operation remains separately authorized unless the user explicitly requests a combined planning operation/);
+  assert.match(readme, /`deliver issue N` authorizes review, verification, stage commit, push, and gated closure/);
+  assert.match(readme, /whole deliverable\/dependency map/);
+  assert.match(guide, /finite target set/);
   assert.match(shared, /Reuse instructions, not stale state/);
   assert.match(entry, /Interpret the user's natural-language request and current conversation/);
   assert.match(entry, /A discussion, draft, or review of a plan is not/);
   assert.match(entry, /Resolve targets in this order: an explicit issue number, a unique contextual/);
   assert.match(entry, /Context identifies what the user means; it never grants/);
   assert.match(entry, /A bare `@gt` asks for concise, contextual help/);
-  assert.match(entry, /For a compound request, identify the requested operations and their order/);
+  assert.match(entry, /For a compound request, identify its authorized operations and order/);
 });
 
 test("plan reference retains grounded stages, safe dependencies, and controlled comment edits", () => {
@@ -140,6 +146,9 @@ test("plan reference retains grounded stages, safe dependencies, and controlled 
   assert.match(plan, /Adaptive discovery and `grill-me`/);
   assert.match(plan, /When the owner explicitly says “grill-me”, “grill me”, or asks to be interviewed/);
   assert.match(plan, /Ask independent frontier questions together/);
+  assert.match(plan, /### Plan a whole project/);
+  assert.match(plan, /Detail the next implementation-ready slice/);
+  assert.match(plan, /do not invent missing requirements/);
   assert.match(plan, /one issue per coherent deliverable/);
   assert.match(plan, /single explicit request to create issue\(s\) and publish the associated plan authorizes those constituent planning writes/);
   assert.match(plan, /Scale analysis and prose to complexity, uncertainty, and impact/);
@@ -177,6 +186,14 @@ test("execution reference preserves implementation, lifecycle, commit, and publi
     "active criteria", "pending candidate"]) {
     assert.ok(execution.includes(literal), `missing execution contract: ${literal}`);
   }
+  assert.match(execution, /^## Execute a planned scope$/m);
+  assert.match(execution, /^## Deliver a stage$/m);
+  assert.match(execution, /execute shortcut does not authorize commit, push, issue closure/);
+  assert.match(execution, /“Deliver issue N”[\s\S]*ordered compound operation/);
+  assert.match(execution, /close only this stage after the verified commit is pushed/);
+  assert.match(execution, /A rejected push leaves the commit in place and blocks closure/);
+  assert.match(execution, /Never advance to another stage/);
+  assert.match(shared, /Compound delivery is the documented authorization exception/);
 });
 
 test("doctor catalog is stable, evidence-based, and covered by inert read-only cases", () => {
@@ -282,13 +299,13 @@ test("context, ambiguity, and compound requests keep target resolution separate 
   assert.match(entry, /does\s+not select an operation, propose a write as already authorized/);
   assert.match(entry, /Context identifies what the user means; it never grants[\s\S]*authorization/);
   assert.match(entry, /If context points to multiple or no unique issues, ask/);
-  assert.match(entry, /If a failed operation blocks a\s+dependent requested operation, stop/);
+  assert.match(entry, /A failed operation\s+blocks dependent steps; stop/);
   assert.match(shared, /explicit issue number first[\s\S]*unique contextual reference[\s\S]*documented default/);
   assert.match(execution, /invalid explicit or contextual target stops without fallback/);
-  assert.match(readme, /A bare `@gt` gives contextual read-only help/);
-  assert.match(readme, /Context can identify a target but never carries authorization/);
-  assert.match(guide, /A bare `@gt` offers contextual read-only help/);
-  assert.match(guide, /If multiple issues could be meant, ask/);
+  assert.match(readme, /A bare `@gt` remains read-only contextual help/);
+  assert.match(readme, /Context may identify a target but never transfers authorization/);
+  assert.match(guide, /a bare `@gt` offers contextual read-only help/);
+  assert.match(guide, /Ambiguous or invalid targets stop without fallback/);
 });
 
 test("planning and execution explain evidence, uncertainty, and partial outcomes", () => {

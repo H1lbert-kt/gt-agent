@@ -1,6 +1,22 @@
 # Implementation and delivery
 
-This reference defines implementation, code review, implementation verification, commit/publish, and completion operations. A build implements only the selected planned stage. Apply the requested operation's contract from `SKILL.md` and GitHub rules from `shared.md`. These are operations, not modes or agent permissions. Reports and planning operations remain available under their own contracts in `planning.md`; no mode or agent change is required by GT. Reload references only if unavailable, changed, or uncertain. Do not invoke retired commands or another agent as a prerequisite.
+This reference defines implementation, code review, implementation verification, commit/publish, and completion operations. A build implements only the selected planned stage. Natural-language shortcuts compose these same operations under the authorization contract in `SKILL.md`; they do not bypass their gates. Apply GitHub rules from `shared.md`. Reports and planning operations remain available under their own contracts in `planning.md`; reload references only if unavailable, changed, or uncertain. Do not invoke retired commands or another agent as a prerequisite.
+
+## Execute a planned scope
+
+“Execute/build/implement” authorizes implementation of the explicitly or uniquely contextually selected planned stage(s), focused review of the resulting changes, and the plan's validated tests. For multiple stages, require an explicit finite target set; process in the plan's order and re-resolve each stage's current plan before work. The execute shortcut does not authorize commit, push, issue closure, scope expansion, or changes to unselected stages. It may make only the existing authorized checkbox updates for criteria proven by implementation and evidence. Repair review/test findings within the authorized scope and revalidate; if a fix changes a material requirement or scope, stop and ask. Do not ask for confirmation between dependent implementation, review, and validation steps already authorized together.
+
+## Deliver a stage
+
+“Deliver issue N” (or an unambiguous contextual equivalent) is explicit authorization for this ordered compound operation on that one stage only:
+
+1. Refresh the issue, branch, working tree, plan/publication chain, active criteria, and applicable repository rules. Stop for an invalid target, ambiguous plan, unrelated or pre-existing staged/user work, or an unclear destination.
+2. Review the complete in-scope diff and verify active criteria and required tests. Fix findings only within the already authorized implementation scope, then rerun relevant validation and review. A failed/unavailable required test, unmet criterion, material scope change, or uncertain state blocks the remaining delivery steps.
+3. Create one stage commit from explicit in-scope paths only, after checking secrets and the complete staged diff. Preserve the existing stage commit subject convention and include `(#N)` as its final token. Never include unrelated or pre-staged user work. If there are no changes to commit, use existing commit evidence only if it can be unambiguously tied to this stage; otherwise stop rather than creating an empty commit or guessing.
+4. Push the verified commit to the already configured, validated upstream. Require a clean tree and clear destination. Do not set an upstream, change remotes, pull, rebase, merge, rewrite history, or force-push automatically. A rejected push leaves the commit in place and blocks closure.
+5. Re-read the stage and run the normal `next` completion gates; close only this stage after the verified commit is pushed, all active criteria are checked, required tests pass, and the tree is clean. Never advance to another stage.
+
+No confirmation is needed between these explicitly authorized dependent steps. Stop at the first failed or uncertain step, verify the current state, and report confirmed successes, failures/unknowns, and which dependent effects did not happen. Never retry or roll back automatically. This shortcut includes delivery writes but does not implement unfinished functionality; request execution separately or explicitly combine execution and delivery for a defined target.
 
 ## Build a stage
 

@@ -9,12 +9,15 @@ GT defines a project workflow through operations, not modes. Accept natural lang
 
 ## Workflow and operations
 
-The typical workflow is understand → plan → implement → review → verify → complete. Keep the workflow proportional: use a concise plan and minimal discovery for clear, low-risk work; deepen analysis and ask targeted questions when ambiguity, risk, or independent deliverables justify it. For planning, recommend an issue structure and execution strategy based on complexity, uncertainty, coupling, deliverable independence, and tracking needs; explain evidence and alternatives without treating the recommendation as authorization for extra writes. This is not an automatic sequence: perform only the requested operation and check its own prerequisites. Commit and publish require their own explicit authorization. Reports such as status, doctor, impact, and handoff are available whenever relevant, including during implementation; they do not require changing modes or agents.
+The user-facing workflow is **plan → execute → deliver**; these are natural-language shortcuts over the existing guarded operations, not modes or new agents. Plan the whole project at outcome/dependency level and make only the next slice implementation-ready. Execute implements the explicitly selected planned scope, reviews it, validates it, and records only criteria supported by evidence. Deliver is an explicitly requested compound operation for one identified stage: review and verify, then commit, push, and close in that order only when each gate passes. A request such as “deliver issue 32” authorizes that complete sequence for issue 32; it does not authorize implementing unfinished scope or touching another stage. For multiple stages, require a defined target set and explicit request to deliver that set; stop at the first failed gate and do not advance beyond it.
+
+Keep the workflow proportional: use concise discovery for clear, low-risk work; deepen analysis and ask targeted questions only when ambiguity, risk, or independent deliverables justify it. Investigate repository facts before asking. Recommend structure and execution strategy from complexity, uncertainty, coupling, deliverable independence, and tracking needs; explain material evidence and alternatives without treating a proposal as authorization for writes. Project planning alone remains read-only; issue creation/publication require an explicit request. A compound request authorizes all and only its named operations, without redundant confirmation between their dependent steps. Context can identify a target but never carries authorization into a later request. Reports such as status, doctor, impact, and handoff remain available whenever relevant.
 
 This table defines each operation's allowed effect and required reference. Code review inspects implementation changes; a planning audit is `doctor`. `verify` checks implementation evidence. Normal completion is `next`; skip/reopen are separate administrative operations. References define target resolution, prerequisites, evidence, and stop conditions, not agent responsibilities.
 
 | Request | Allowed effect | Read |
 | --- | --- | --- |
+| plan a project | Whole-project proposal; GitHub writes only when explicitly requested | `references/planning.md` |
 | kickoff/start | Proportional survey and proposal; create issues only when explicitly requested | `references/planning.md` |
 | create issues/stages/dependencies | Explicitly requested issue/edge creation | `references/planning.md` |
 | plan/plan all/replan | Record/accept plan and update `planned` under plan contract | `references/planning.md` |
@@ -27,6 +30,8 @@ This table defines each operation's allowed effect and required reference. Code 
 | skip | Explicitly confirmed administrative close/label/comment | `references/planning.md` |
 | reopen | Explicitly requested reopen and conditional label removal | `references/planning.md` |
 | build/implement | Implement selected planned scope; validate and report | `references/execution.md` |
+| execute planned scope | Build plus focused review and validation; no commit/push/close | `references/execution.md` |
+| deliver a stage | Review, verify, commit, push, and close one named eligible stage in order | `references/execution.md` |
 | code review | Read-only implementation review | `references/execution.md` |
 | verify implementation | Read-only implementation/completion verification | `references/execution.md` |
 | next/normal close | Gate-check and close one eligible stage | `references/execution.md` |
@@ -70,11 +75,14 @@ stage.
 A bare `@gt` asks for concise, contextual help based on the available
 conversation and repository state. It may offer read-only status/help, but does
 not select an operation, propose a write as already authorized, or perform one.
-For a compound request, identify the requested operations and their order;
-perform only effects clearly authorized by the request, check each operation's
-prerequisites independently, and report partial outcomes. Do not infer extra
-commit, publish, close, or follow-up actions. If a failed operation blocks a
-dependent requested operation, stop that dependent step and explain why.
+For a compound request, identify its authorized operations and order; check
+each prerequisite and effect independently, without redundant confirmations
+between explicitly requested dependent steps. The `deliver a stage` shortcut
+is the documented exception to the otherwise separate commit/publish/close
+operations: it authorizes those three writes for its identified stage, subject
+to every existing gate. It does not include implementation. A failed operation
+blocks dependent steps; stop, verify the partial state, and report it. Never
+extend a target set or infer an unrelated follow-up action.
 
 ## Continuity
 
@@ -99,6 +107,6 @@ Use only the selected reference and its required dependencies. Do not run the re
 - New v3 plans remain candidates until a separate verified publication record links the exact revision. Only explicitly declared, persistently identified criteria in the published v3 plan are active; the record verifies technical consistency, not human approval. Resolve plans and active criteria through `shared.md`; preserve v1/v2 history conservatively and never migrate or drop historical requirements automatically. A user-authorized combined create-and-plan request still performs the complete validation and publication protocol.
 - Relationship analysis distinguishes parent/sub-issue grouping, native blocking dependencies, and contextual references. Only verified native open blockers affect blocker state; incomplete data stays unknown, and “unblocked” is not equivalent to implementation-ready. The offline graph analyzer never reads GitHub or writes relationships.
 - When a material decision affects scope or a write, distinguish observed facts, inferences, and recommendations; cite the source for target, scope, dependency, and priority choices, and preserve `unknown` when evidence is incomplete. For partial or uncertain operations, report confirmed effects, failures/unknowns, and a safe next step without retrying or rolling back automatically. Keep test summaries concise and do not describe local fixtures as proof of live API or model behavior.
-- Git writes require an explicit request for that exact operation. Commit does not authorize publish; publish does not authorize commit. Never force-push, amend, reset, or discard work.
-- Never close, plan, commit, or publish as a side effect of another operation. Stop after the requested operation and report evidence and partial failures.
+- Git writes require explicit authorization through the corresponding operation or the documented `deliver a stage` compound operation. A plain commit does not authorize publish; publish does not authorize commit. Never force-push, amend, reset, or discard work.
+- Planning and execution never imply delivery. Only an explicit delivery request authorizes its guarded commit/push/close sequence. Stop after the requested operation and report evidence and partial failures.
 - This skill is behavioral guidance, not a permission sandbox. Respect the active agent's permissions and project rules.
