@@ -15,19 +15,26 @@ const guide = readFileSync(join(root, "docs", "skill.md"), "utf8");
 const workflow = readFileSync(join(root, ".github", "workflows", "tests.yml"), "utf8");
 const stageTemplate = readFileSync(join(root, ".github", "ISSUE_TEMPLATE", "stage.md"), "utf8");
 const taxonomy = readFileSync(join(skillRoot, "references", "issue-taxonomy.md"), "utf8");
+const authorization = readFileSync(join(skillRoot, "references", "authorization.md"), "utf8");
+const git = readFileSync(join(skillRoot, "references", "git.md"), "utf8");
+const security = readFileSync(join(skillRoot, "references", "security.md"), "utf8");
+const discovery = readFileSync(join(skillRoot, "references", "discovery.md"), "utf8");
+const tasks = readFileSync(join(skillRoot, "references", "tasks.md"), "utf8");
+const pr = readFileSync(join(skillRoot, "references", "pull-request.md"), "utf8");
+const review = readFileSync(join(skillRoot, "references", "review.md"), "utf8");
+const grillme = readFileSync(join(root, "skills", "grillme", "SKILL.md"), "utf8");
 const doctorCases = JSON.parse(readFileSync(join(root, "tests", "fixtures", "doctor-cases.json"), "utf8"));
 
 test("skill defines a workflow without managing modes or agents", () => {
   assert.match(entry, /^---\nname: gt\ndescription: .+\n---\n/);
   assert.match(entry, /workflow through operations, not modes/);
-  assert.match(entry, /GT does not define agent modes or select\/switch agents/);
-  assert.match(entry, /Operations run under the active agent's permissions/);
-  assert.match(entry, /If a requested operation is unavailable, explain the limitation and stop that operation/);
-  assert.match(entry, /Do not delegate work to another agent/);
+  assert.match(authorization, /Respect active-agent permissions and project rules; do not delegate/);
+  assert.match(guide, /If an operation is unavailable[\s\S]*stop that operation/);
   assert.doesNotMatch(entry, /agent:|permission:|\$ARGUMENTS|primary agent/);
-  assert.match(entry, /Do not run the retired `\/gt` or `\/cp` commands/);
+  assert.match(authorization, /Do not invoke retired `\/gt` or `\/cp` commands/);
   assert.deepEqual(readdirSync(join(skillRoot, "references")).sort(), [
-    "execution.md", "issue-taxonomy.md", "planning.md", "shared.md",
+    "authorization.md", "discovery.md", "execution.md", "git.md", "issue-taxonomy.md",
+    "planning.md", "pull-request.md", "review.md", "security.md", "shared.md", "tasks.md",
   ]);
   for (const text of [entry, plan, execution, shared, readme, guide]) {
     assert.doesNotMatch(text, /two modes|\| Mode \||\b(?:Plan|Build) mode\b|\b(?:Plan|Build) owns\b|\bowning mode\b|Plan-owned|Build does not own|references\/build\.md/i);
@@ -61,12 +68,14 @@ test("stage template and issue taxonomy stay complete, compact, and conservative
 });
 
 test("operations table preserves effects and reference contracts without mode ownership", () => {
-  const table = entry.match(/\| Request \| Allowed effect \| Read \|([\s\S]*?)\n\nFor GitHub operations/);
+  const table = entry.match(/\| Request \| Allowed effect \| Read \|([\s\S]*?)\n\nApply/);
   assert.ok(table, "entry point contains the operations table");
   const operations = table[1].split("\n").filter((line) => line.startsWith("| ") && !line.includes("---"))
     .map((line) => line.split("|").map((cell) => cell.trim()).slice(1, -1));
   const expected = [
     ["plan a project", "planning"],
+    ["discover / assess project workflow", "discovery"],
+    ["grillme / decision interview", "../grillme/SKILL.md"],
     ["kickoff/start", "planning"],
     ["create issues/stages/dependencies", "planning"],
     ["plan/plan all/replan", "planning"],
@@ -80,21 +89,24 @@ test("operations table preserves effects and reference contracts without mode ow
     ["reopen", "planning"],
     ["build/implement", "execution"],
     ["execute planned scope", "execution"],
-    ["deliver a stage", "execution"],
-    ["code review", "execution"],
+    ["deliver a stage", "execution,security,pull-request"],
+    ["code review", "review,security"],
     ["verify implementation", "execution"],
     ["next/normal close", "execution"],
     ["owner-requested close", "execution"],
-    ["commit", "execution"],
-    ["publish", "execution"],
+    ["commit", "git,security"],
+    ["publish", "git,security"],
+    ["create/update PR", "pull-request"],
   ];
   assert.deepEqual(operations.map(([request]) => request), expected.map(([request]) => request));
   for (const [request, effect, reference, ...extra] of operations) {
     assert.deepEqual(extra, [], "operations have no mode column");
     assert.ok(effect.length > 0, `missing allowed effect for ${request}`);
     const referenceName = expected.find(([name]) => name === request)[1];
-    assert.equal(reference, `\`references/${referenceName}.md\``);
-    assert.ok(existsSync(join(skillRoot, "references", `${referenceName}.md`)));
+    const paths = referenceName === "../grillme/SKILL.md" ? [referenceName]
+      : referenceName.split(",").map((name) => `references/${name}.md`);
+    assert.equal(reference, paths.map((path) => `\`${path}\``).join(", "));
+    for (const path of paths) assert.ok(existsSync(join(skillRoot, path)));
   }
   const effectOf = (request) => operations.find(([name]) => name === request)?.[1];
   for (const request of ["status", "doctor (planning audit)", "impact", "log", "code review", "verify implementation"]) {
@@ -106,10 +118,10 @@ test("operations table preserves effects and reference contracts without mode ow
   }
   assert.match(effectOf("next/normal close"), /Gate-check and close one eligible stage/);
   assert.match(effectOf("build/implement"), /selected planned scope/);
-  assert.match(entry, /user-facing workflow is \*\*plan → execute → deliver\*\*/);
-  assert.match(effectOf("deliver a stage"), /one named eligible stage in order/);
-  assert.match(entry, /deliver a stage` shortcut[\s\S]*authorizes those three writes/);
-  assert.match(entry, /Planning and execution never imply delivery/);
+  assert.match(entry, /user-facing workflow is \*\*discover → plan → execute → review → deliver\*\*/);
+  assert.match(effectOf("deliver a stage"), /PR\/review\/merge as required/);
+  assert.match(authorization, /`deliver issue N` authorizes guarded commit\/push and PR creation/);
+  assert.match(authorization, /Planning\/execution do not imply delivery/);
   assert.match(plan, /Reports may be requested whenever relevant, including during implementation/);
   assert.match(execution, /Reports and planning operations remain available under their own contracts/);
   assert.match(execution, /Natural-language shortcuts compose these same operations/);
@@ -120,17 +132,17 @@ test("operations table preserves effects and reference contracts without mode ow
     assert.match(text, /Reports[\s\S]*including during implementation/);
     assert.match(text, /does not select or switch agents/);
   }
-  assert.match(entry, /repeating `@gt` is optional/);
-  assert.match(readme, /`deliver issue N` authorizes review, verification, stage commit, push, and gated closure/);
+  assert.match(authorization, /do not require fixed commands or repeated `@gt`/);
+  assert.match(readme, /pending review\/checks block completion/);
   assert.match(readme, /whole deliverable\/dependency map/);
   assert.match(guide, /finite target set/);
   assert.match(shared, /Reuse instructions, not stale state/);
-  assert.match(entry, /Interpret the user's natural-language request and current conversation/);
-  assert.match(entry, /A discussion, draft, or review of a plan is not/);
-  assert.match(entry, /Resolve targets in this order: an explicit issue number, a unique contextual/);
-  assert.match(entry, /Context identifies what the user means; it never grants/);
-  assert.match(entry, /A bare `@gt` asks for concise, contextual help/);
-  assert.match(entry, /For a compound request, identify its authorized operations and order/);
+  assert.match(authorization, /Interpret natural language/);
+  assert.match(authorization, /Discussion, draft, or review of a plan does not authorize publication/);
+  assert.match(authorization, /Resolve targets by explicit issue number, then unique contextual reference/);
+  assert.match(authorization, /Context identifies a target but never authorizes an effect/);
+  assert.match(authorization, /A bare `@gt` is read-only help\/status/);
+  assert.match(authorization, /Compound requests authorize only named operations/);
 });
 
 test("plan reference retains grounded stages, safe dependencies, and controlled comment edits", () => {
@@ -143,9 +155,9 @@ test("plan reference retains grounded stages, safe dependencies, and controlled 
   assert.match(shared, /not human approval, authorship, signature, or authorization/);
   assert.match(plan, /Discussion\/drafting\/review alone is read-only/);
   assert.match(plan, /Kickoff is a read-only, proportional survey\/proposal/);
-  assert.match(plan, /Adaptive discovery and `grill-me`/);
-  assert.match(plan, /When the owner explicitly says “grill-me”, “grill me”, or asks to be interviewed/);
-  assert.match(plan, /Ask independent frontier questions together/);
+  assert.match(plan, /Decision discovery with `grillme`/);
+  assert.match(plan, /Invoke the local `grillme` skill/);
+  assert.match(grillme, /Combine independent questions; defer dependent questions/);
   assert.match(plan, /### Plan a whole project/);
   assert.match(plan, /Detail the next implementation-ready slice/);
   assert.match(plan, /do not invent missing requirements/);
@@ -176,8 +188,7 @@ test("plan reference retains grounded stages, safe dependencies, and controlled 
 test("execution reference preserves implementation, lifecycle, commit, and publish gates", () => {
   for (const literal of ["implements only the selected planned stage", "Do not automatically commit",
     "every active criterion checked", "git status --porcelain", "not a push",
-    "Stage explicit paths only", "English Conventional Commit", "(#<issue-number>)",
-    "existing commits only", "force-push", "without automatically pulling"]) {
+    "(#<issue-number>)", "existing commits only", "force-push"]) {
     assert.ok(execution.includes(literal), `missing execution rule: ${literal}`);
   }
   assert.match(execution, /explicit request to overwrite a specific comment authorizes replacing only that comment/);
@@ -189,10 +200,12 @@ test("execution reference preserves implementation, lifecycle, commit, and publi
   assert.match(execution, /^## Execute a planned scope$/m);
   assert.match(execution, /^## Deliver a stage$/m);
   assert.match(execution, /execute shortcut does not authorize commit, push, issue closure/);
-  assert.match(execution, /“Deliver issue N”[\s\S]*ordered compound operation/);
-  assert.match(execution, /close only this stage after the verified commit is pushed/);
-  assert.match(execution, /A rejected push leaves the commit in place and blocks closure/);
-  assert.match(execution, /Never advance to another stage/);
+  assert.match(execution, /“Deliver issue N”[\s\S]*ordered delivery operations/);
+  assert.match(execution, /Close the stage\/task only after merge \(when applicable\)/);
+  assert.match(git, /Stop on ambiguous destination or rejected push/);
+  assert.match(execution, /never advance to another stage/);
+  assert.match(git, /stage explicit in-scope paths only/);
+  assert.match(git, /Never use `git add \.`\/`-A`/);
   assert.match(shared, /Compound delivery is the documented authorization exception/);
 });
 
@@ -230,8 +243,8 @@ test("CI uses supported Node 22 with read-only permissions and no credentials", 
 
 test("local Markdown links in maintained docs resolve within the repository", () => {
   const docs = ["README.md", "docs/skill.md", "skills/gt/SKILL.md",
-    "skills/gt/references/planning.md", "skills/gt/references/execution.md", "skills/gt/references/shared.md",
-    "skills/gt/references/issue-taxonomy.md"];
+    "skills/grillme/SKILL.md", ...readdirSync(join(skillRoot, "references"))
+      .map((name) => `skills/gt/references/${name}`)];
   for (const file of docs) {
     const text = readFileSync(join(root, file), "utf8");
     for (const [, target] of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
@@ -240,6 +253,36 @@ test("local Markdown links in maintained docs resolve within the repository", ()
       if (localTarget) assert.ok(existsSync(join(dirname(join(root, file)), localTarget)), `${file}: broken link ${target}`);
     }
   }
+});
+
+test("methodology preserves discovery, adaptive interviews, and independent task tracking", () => {
+  assert.match(grillme, /^---\nname: grillme\ndescription: .+\n---\n/);
+  for (const phrase of ["Inspect available context/repository evidence first", "small numbered round",
+    "recommended answer and concise trade-off", "avoid repetition", "Stop when the decision is safe and actionable",
+    "Answers, silence, and agreement", "not authorization"]) assert.ok(grillme.includes(phrase), phrase);
+  assert.match(discovery, /Read-only unless the owner separately authorizes a write/);
+  assert.match(discovery, /\*\*preserve\*\*, \*\*complement\*\*, \*\*adapt\*\*, or \*\*migrate\*\*/);
+  assert.match(discovery, /Do not prescribe GT merely because it is available/);
+  assert.match(tasks, /independently trackable deliverables/);
+  assert.match(tasks, /grouping is organizational, not a blocker or proof of completion/);
+  assert.match(tasks, /Avoid duplicate obligations/);
+  assert.match(entry, /`\.\.\/grillme\/SKILL.md`/);
+  for (const text of [readme, guide]) assert.match(text, /skills\/grillme/);
+});
+
+test("review, Git, and PR contracts retain secret safety and external completion gates", () => {
+  assert.match(review, /Read-only unless a separate implementation request/);
+  assert.match(review, /Report findings by severity with file\/line evidence/);
+  for (const text of [review, git, pr]) assert.match(text, /security\.md/);
+  assert.match(security, /Do not open or print `\.env` contents/);
+  assert.match(security, /Ignore rules do not protect already tracked files/);
+  assert.match(security, /Report scanner absence as a validation gap; do not claim clean/);
+  assert.match(security, /stop before the write, avoid quoting the value/);
+  assert.match(pr, /pushing alone does not authorize it/);
+  assert.match(pr, /Do not self-approve or merge unless separately and explicitly requested/);
+  assert.match(pr, /pending\/unknown checks as not passing/);
+  assert.match(execution, /If checks\/review are pending, stop with the PR open/);
+  assert.match(execution, /also require verified merged state and passing required checks/);
 });
 
 test("the documented directory test command loads every suite", () => {
@@ -257,7 +300,9 @@ test("relationship contract documents distinct edge types, uncertainty, and API 
   assert.match(graph, /RELATION_TARGET_UNKNOWN/);
   assert.match(graph, /blockerState/);
   assert.match(shared, /parent\/sub-issue data is separate/);
-  assert.match(shared, /Hierarchy mutations are not enabled by this skill/);
+  assert.match(shared, /Sub-issue writes are allowed only when explicitly requested/);
+  assert.match(shared, /current API endpoint\/account permission and parent-child preconditions/);
+  assert.match(shared, /resulting relationship is read back and confirmed/);
   assert.match(guide, /Parent\/sub-issue edges represent grouping/);
   assert.match(guide, /installed `gh issue` command exposes no hierarchy subcommand/);
   assert.match(guide, /triage|permission/i);
@@ -295,13 +340,12 @@ test("shared repository rules retain guards, issue identity, and safe test valid
 });
 
 test("context, ambiguity, and compound requests keep target resolution separate from authorization", () => {
-  assert.match(entry, /A bare `@gt` asks for concise, contextual help/);
-  assert.match(entry, /does\s+not select an operation, propose a write as already authorized/);
-  assert.match(entry, /Context identifies what the user means; it never grants[\s\S]*authorization/);
-  assert.match(entry, /If context points to multiple or no unique issues, ask/);
-  assert.match(entry, /A failed operation\s+blocks dependent steps; stop/);
+  assert.match(authorization, /A bare `@gt` is read-only help\/status; it selects no operation and authorizes no write/);
+  assert.match(authorization, /Context identifies a target but never authorizes an effect/);
+  assert.match(authorization, /Ambiguous or invalid explicit\/contextual targets stop without fallback/);
+  assert.match(authorization, /Stop and report partial outcomes if a prerequisite\/write fails/);
   assert.match(shared, /explicit issue number first[\s\S]*unique contextual reference[\s\S]*documented default/);
-  assert.match(execution, /invalid explicit or contextual target stops without fallback/);
+  assert.match(execution, /An explicit or contextual target never falls back/);
   assert.match(readme, /A bare `@gt` remains read-only contextual help/);
   assert.match(readme, /Context may identify a target but never transfers authorization/);
   assert.match(guide, /a bare `@gt` offers contextual read-only help/);
@@ -309,18 +353,18 @@ test("context, ambiguity, and compound requests keep target resolution separate 
 });
 
 test("planning and execution explain evidence, uncertainty, and partial outcomes", () => {
-  assert.match(plan, /material choice of target, scope, dependency, or priority[\s\S]*observed source/);
+  assert.match(plan, /Ground target, scope, dependency, and priority choices[\s\S]*observed repository\/GitHub evidence/);
   assert.match(plan, /preserve unknown when evidence is incomplete or conflicting/);
   assert.match(execution, /confirmed effects, failures\/unknowns, and the safe next step/);
   assert.match(execution, /distinguish observed results from inference/);
-  assert.match(entry, /distinguish observed facts, inferences, and recommendations/);
+  assert.match(authorization, /distinguish observations, inferences, and recommendations/);
   assert.match(readme, /Decision evidence and recovery/);
   assert.match(guide, /Decision evidence and partial outcomes/);
   assert.match(guide, /The next step is advice, not authorization/);
 });
 
 test("skill and docs clarify explicit targets and narrow checkbox authorization", () => {
-  assert.match(entry, /Explicit or contextual issue targets never silently fall back/i);
+  assert.match(authorization, /Ambiguous or invalid explicit\/contextual targets stop without fallback/);
   assert.match(plan, /only an authorized build may perform the minimal checkbox updates/);
   assert.match(readme, /Ambiguous or invalid targets stop without fallback/i);
   assert.match(readme, /separate authorization/);

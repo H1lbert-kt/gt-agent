@@ -159,12 +159,12 @@ async function unusedBackupPath(target) {
   const timestamp = new Date().toISOString().replaceAll(/[:.]/g, "-");
   const backupRoot = join(dirname(target), ".gt-backups");
   await mkdir(backupRoot, { recursive: true });
-  let candidate = join(backupRoot, `gt-${timestamp}`);
+  let candidate = join(backupRoot, `${basename(target)}-${timestamp}`);
   let suffix = 1;
   while (true) {
     try {
       await access(candidate);
-      candidate = join(backupRoot, `gt-${timestamp}-${suffix++}`);
+      candidate = join(backupRoot, `${basename(target)}-${timestamp}-${suffix++}`);
     } catch (error) {
       if (error.code === "ENOENT") return candidate;
       throw error;
@@ -183,7 +183,9 @@ export async function syncBundle({
   if (!apply) throw new Error("No files changed: pass --apply to authorize installation or update");
   const result = await inspectBundle({ source, target, repo });
   if (result.target === result.source) throw new Error("Refusing to overwrite the versioned source bundle");
-  if (basename(result.target) !== "gt") throw new Error("Target must be the skill directory named gt");
+  if (basename(result.target) !== basename(result.source)) {
+    throw new Error(`Target must be the skill directory named ${basename(result.source)}`);
+  }
   if (isWithin(result.source, result.target)) throw new Error("Target cannot be inside the versioned source bundle");
   if (result.targetIsExternal && !confirmExternal) {
     throw new Error("External destination refused: pass --confirm-external after reviewing this exact target");
@@ -237,22 +239,34 @@ function usage() {
   node scripts/gt-skill.mjs check <path-to-gt-skill>
   node scripts/gt-skill.mjs sync <path-to-gt-skill> --apply [--confirm-external] [--replace]
 
+Add --skill grillme to any command to select skills/grillme instead of skills/gt.
+Install both skills as sibling directories for the complete methodology.
+
 check is read-only. sync refuses external destinations without --confirm-external
 and divergent destinations without --replace; replaced content is kept in a sibling backup.`);
 }
 
 async function main(args) {
+  let source = sourceRoot;
+  const skillIndex = args.indexOf("--skill");
+  if (skillIndex !== -1) {
+    const skill = args[skillIndex + 1];
+    if (!["gt", "grillme"].includes(skill)) throw new Error("--skill requires gt or grillme");
+    args = [...args.slice(0, skillIndex), ...args.slice(skillIndex + 2)];
+    if (args.includes("--skill")) throw new Error("Duplicate --skill option");
+    source = join(repositoryRoot, "skills", skill);
+  }
   const [command, target, ...flags] = args;
   if (!command || command === "--help" || command === "-h") {
     usage();
     return 0;
   }
   if (command === "manifest" && !target) {
-    console.log(JSON.stringify(await createManifest(), null, 2));
+    console.log(JSON.stringify(await createManifest(source), null, 2));
     return 0;
   }
   if (command === "check" && target && flags.length === 0) {
-    const result = await inspectBundle({ target });
+    const result = await inspectBundle({ source, target });
     printInspection(result);
     return result.state === "equal" ? 0 : 1;
   }
@@ -262,6 +276,7 @@ async function main(args) {
       throw new Error("Unknown or duplicate sync option");
     }
     const result = await syncBundle({
+      source,
       target,
       apply: flags.includes("--apply"),
       confirmExternal: flags.includes("--confirm-external"),

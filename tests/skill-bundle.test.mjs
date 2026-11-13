@@ -3,9 +3,12 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { createManifest, inspectBundle, syncBundle } from "../scripts/gt-skill.mjs";
 
 const temporaryRoots = [];
+const cli = fileURLToPath(new URL("../scripts/gt-skill.mjs", import.meta.url));
 
 async function makeSandbox() {
   const root = await mkdtemp(join(tmpdir(), "gt-skill-bundle-"));
@@ -90,4 +93,33 @@ test("external targets require explicit confirmation and remain fixture-only", a
   assert.equal(installed.action, "installed");
   assert.equal(installed.targetIsExternal, true);
   assert.equal((await inspectBundle({ source, target, repo })).state, "equal");
+});
+
+test("CLI selects Grill Me with the same external, divergence, and backup safeguards", async () => {
+  const { root } = await makeSandbox();
+  const target = join(root, "installed", "grillme");
+  const run = (...args) => spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
+  const flags = ["--skill", "grillme"];
+  const manifest = run("manifest", ...flags);
+  assert.equal(manifest.status, 0, manifest.stderr);
+  assert.deepEqual(JSON.parse(manifest.stdout).files.map(({ path }) => path), ["SKILL.md"]);
+  assert.equal(run("check", target, ...flags).status, 1);
+  assert.equal(run("sync", target, ...flags, "--apply").status, 2);
+  await assert.rejects(readdir(join(root, "installed")), { code: "ENOENT" });
+  assert.equal(run("sync", target, ...flags, "--apply", "--confirm-external").status, 0);
+  assert.equal(run("check", target, ...flags).status, 0);
+  await writeFile(join(target, "SKILL.md"), "custom interview\n");
+  assert.equal(run("sync", target, ...flags, "--apply", "--confirm-external").status, 1);
+  const replaced = run("sync", target, ...flags, "--apply", "--confirm-external", "--replace");
+  assert.equal(replaced.status, 0, replaced.stderr);
+  const backup = replaced.stdout.match(/^backup: (.+)$/m)[1];
+  assert.match(backup, /grillme-/);
+  assert.equal(await readFile(join(backup, "SKILL.md"), "utf8"), "custom interview\n");
+  assert.equal(run("check", target, ...flags).status, 0);
+  assert.equal(run("sync", join(root, "wrong-name"), ...flags, "--apply", "--confirm-external").status, 2);
+  for (const args of [["manifest", "--skill"], ["manifest", "--skill", "../gt"],
+    ["manifest", ...flags, ...flags]]) {
+    assert.equal(run(...args).status, 2);
+  }
+  assert.equal(run("manifest").status, 0);
 });
